@@ -19,12 +19,12 @@ var config = {
   output: "./build/deploy"
 }
 
-gulp.task("default", [ "restore", "version", "compile", "pack" ]);
+gulp.task("default", [ "restore", "version", "compile", "test", "pack" ]);
 
 gulp.task('restore', function() {
   return gulp
     .src(config.name + '.sln', { read: false })
-    .pipe(shell('"./tools/nuget/nuget.exe" restore'));
+    .pipe(shell('"./build/nuget/nuget.exe" restore'));
 });
 
 gulp.task('version', function() {
@@ -64,12 +64,12 @@ gulp.task('test', [ "compile" ], function() {
     }));
 });
 
-gulp.task('pack', [ 'compile', 'test' ], function () {
+gulp.task('pack', [ 'test' ], function () {
   return gulp
     .src('**/*.nuspec', { read: false })
     .pipe(rename({ extname: ".csproj" }))
     .pipe(shell([
-      '"tools/nuget/nuget.exe" pack <%= file.path %> -version <%= version %> -prop configuration=<%= mode %> -o <%= output%>'
+      '"build/nuget/nuget.exe" pack <%= file.path %> -version <%= version %> -prop configuration=<%= mode %> -o <%= output%>'
     ], {
       templateData: config
     }));
