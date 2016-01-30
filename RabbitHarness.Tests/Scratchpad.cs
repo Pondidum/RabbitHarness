@@ -30,31 +30,10 @@ namespace RabbitHarness.Tests
 				channel.QueueDeclare("some queue", durable: true, exclusive: false, autoDelete: false, arguments: null);
 				channel.BasicQos(0, 1, false);
 
-				var listener = new EventingBasicConsumer(channel);
-				listener.Received += (s, e) =>
-				{
-					var result = Encoding.UTF8.GetString(e.Body).Length.ToString();
-
-					var props = channel.CreateBasicProperties();
-					props.CorrelationId = e.BasicProperties.CorrelationId;
-
-					channel.BasicPublish(
-						exchange: "",
-						routingKey: e.BasicProperties.ReplyTo,
-						basicProperties: props,
-						body: Encoding.UTF8.GetBytes(result));
-					channel.BasicAck(e.DeliveryTag, false);
-				};
-
-				channel.BasicConsume("some queue", false, listener);
-
-
-				var message = new
-				{
-					Message = "message"
-				};
+				CreateResponder(channel);
 
 				var reset = new AutoResetEvent(false);
+				var message = new { Message = "message" };
 
 				factory.Query<string>("some queue", message, response =>
 				{
@@ -62,10 +41,32 @@ namespace RabbitHarness.Tests
 					reset.Set();
 				});
 
-				reset.WaitOne();
+				reset.WaitOne(TimeSpan.FromSeconds(10));
 
 				channel.QueueDelete("some queue");
 			}
+		}
+
+		private static void CreateResponder(IModel channel)
+		{
+			var listener = new EventingBasicConsumer(channel);
+
+			listener.Received += (s, e) =>
+			{
+				var result = Encoding.UTF8.GetString(e.Body).Length.ToString();
+
+				var props = channel.CreateBasicProperties();
+				props.CorrelationId = e.BasicProperties.CorrelationId;
+
+				channel.BasicPublish(
+					exchange: "",
+					routingKey: e.BasicProperties.ReplyTo,
+					basicProperties: props,
+					body: Encoding.UTF8.GetBytes(result));
+				channel.BasicAck(e.DeliveryTag, false);
+			};
+
+			channel.BasicConsume("some queue", false, listener);
 		}
 	}
 
