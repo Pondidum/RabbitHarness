@@ -11,6 +11,7 @@ namespace RabbitHarness.Tests
 {
 	public class Scratchpad
 	{
+		public const string Host = "192.168.99.100";
 		private readonly ITestOutputHelper _output;
 
 		public Scratchpad(ITestOutputHelper output)
@@ -18,37 +19,52 @@ namespace RabbitHarness.Tests
 			_output = output;
 		}
 
-		[Fact]
+		[RequiresRabbitFact(Host)]
 		public void When_testing_something()
 		{
-			var factory = new ConnectionFactory { HostName = "192.168.99.100" };
+			var factory = new ConnectionFactory { HostName = Host };
 
 			using (var connection = factory.CreateConnection())
-			using (var model = connection.CreateModel())
+			using (var channel = connection.CreateModel())
 			{
-				model.QueueDeclare("some queue", true, false, false, null);
-				model.BasicQos(0, 1, false);
-			}
+				channel.QueueDeclare("some queue", durable: true, exclusive: false, autoDelete: false, arguments: null);
+				channel.BasicQos(0, 1, false);
 
-			var message = new
-			{
-				Message = "message"
-			};
+				var listener = new EventingBasicConsumer(channel);
+				listener.Received += (s, e) =>
+				{
+					var result = Encoding.UTF8.GetString(e.Body).Length.ToString();
 
-			var reset = new AutoResetEvent(false);
+					var props = channel.CreateBasicProperties();
+					props.CorrelationId = e.BasicProperties.CorrelationId;
 
-			factory.Query<string>("some queue", message, response =>
-			{
-				_output.WriteLine(response);
-				reset.Set();
-			});
+					channel.BasicPublish(
+						exchange: "",
+						routingKey: e.BasicProperties.ReplyTo,
+						basicProperties: props,
+						body: Encoding.UTF8.GetBytes(result));
+					channel.BasicAck(e.DeliveryTag, false);
+				};
 
-			reset.WaitOne();
+				channel.BasicConsume("some queue", false, listener);
 
-			using (var connection = factory.CreateConnection())
-			using (var model = connection.CreateModel())
-			{
-				model.QueueDelete("some queue");
+
+				var message = new
+				{
+					Message = "message"
+				};
+
+				var reset = new AutoResetEvent(false);
+
+				factory.Query<string>("some queue", message, response =>
+				{
+					_output.WriteLine(response);
+					reset.Set();
+				});
+
+				reset.WaitOne();
+
+				channel.QueueDelete("some queue");
 			}
 		}
 	}
