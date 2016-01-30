@@ -11,11 +11,14 @@ namespace RabbitHarness.Tests
 {
 	public class Scratchpad : IDisposable
 	{
-		public const string Host = "192.168.99.100";
+		private const string Host = "192.168.99.100";
+		private const string QueueName = "some queue";
+
 		private readonly ITestOutputHelper _output;
-		private IConnection _connection;
-		private IModel _channel;
-		private ConnectionFactory _factory;
+
+		private readonly IConnection _connection;
+		private readonly IModel _channel;
+		private readonly ConnectionFactory _factory;
 
 		public Scratchpad(ITestOutputHelper output)
 		{
@@ -36,7 +39,7 @@ namespace RabbitHarness.Tests
 			var reset = new AutoResetEvent(false);
 			var message = new { Message = "message" };
 
-			_factory.Query<int>("some queue", message, response =>
+			_factory.Query<int>(QueueName, message, response =>
 			{
 				response.ShouldBe(21);
 				reset.Set();
@@ -49,10 +52,10 @@ namespace RabbitHarness.Tests
 		public void When_nothing_is_listening()
 		{
 			var reset = new AutoResetEvent(false);
-			var message = new { Message = "message" };
+			var message = new { Message = "message" };	
 			var received = false;
 
-			_factory.Query<int>("some queue", message, response =>
+			_factory.Query<int>(QueueName, message, response =>
 			{
 				received = true;
 				reset.Set();
@@ -71,7 +74,7 @@ namespace RabbitHarness.Tests
 			var message = new { Message = "message" };
 			var received = false;
 
-			_factory.Query<int>("some queue", message, response =>
+			_factory.Query<int>(QueueName, message, response =>
 			{
 				received = true;
 				reset.Set();
@@ -88,7 +91,7 @@ namespace RabbitHarness.Tests
 		private void CreateResponder(Action<IBasicProperties> mangle)
 		{
 
-			_channel.QueueDeclare("some queue", durable: true, exclusive: false, autoDelete: false, arguments: null);
+			_channel.QueueDeclare(QueueName, durable: true, exclusive: false, autoDelete: false, arguments: null);
 			_channel.BasicQos(0, 1, false);
 
 			var listener = new EventingBasicConsumer(_channel);
@@ -110,13 +113,14 @@ namespace RabbitHarness.Tests
 				_channel.BasicAck(e.DeliveryTag, false);
 			};
 
-			_channel.BasicConsume("some queue", false, listener);
+			_channel.BasicConsume(QueueName, false, listener);
 
 			return;
 		}
 
 		public void Dispose()
 		{
+			_channel.QueueDelete(QueueName);
 			_channel.Dispose();
 			_connection.Dispose();
 		}
