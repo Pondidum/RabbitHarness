@@ -1,124 +1,124 @@
 ﻿using System;
 using System.Text;
 using System.Threading;
-using Newtonsoft.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace RabbitHarness.Tests
 {
-	public class Scratchpad
+	public class Scratchpad : IDisposable
 	{
 		public const string Host = "192.168.99.100";
 		private readonly ITestOutputHelper _output;
+		private IConnection _connection;
+		private IModel _channel;
+		private ConnectionFactory _factory;
 
 		public Scratchpad(ITestOutputHelper output)
 		{
 			_output = output;
+
+			_factory = new ConnectionFactory { HostName = Host };
+
+			_connection = _factory.CreateConnection();
+			_channel = _connection.CreateModel();
+
 		}
 
 		[RequiresRabbitFact(Host)]
-		public void When_testing_something()
+		public void When_a_reply_is_sent()
 		{
-			var factory = new ConnectionFactory { HostName = Host };
+			CreateResponder();
 
-			using (var connection = factory.CreateConnection())
-			using (var channel = connection.CreateModel())
+			var reset = new AutoResetEvent(false);
+			var message = new { Message = "message" };
+
+			_factory.Query<int>("some queue", message, response =>
 			{
-				channel.QueueDeclare("some queue", durable: true, exclusive: false, autoDelete: false, arguments: null);
-				channel.BasicQos(0, 1, false);
+				response.ShouldBe(21);
+				reset.Set();
+			});
 
-				CreateResponder(channel);
-
-				var reset = new AutoResetEvent(false);
-				var message = new { Message = "message" };
-
-				factory.Query<string>("some queue", message, response =>
-				{
-					_output.WriteLine(response);
-					reset.Set();
-				});
-
-				reset.WaitOne(TimeSpan.FromSeconds(10));
-
-				channel.QueueDelete("some queue");
-			}
+			reset.WaitOne(TimeSpan.FromSeconds(10));
 		}
 
-		private static void CreateResponder(IModel channel)
+		[RequiresRabbitFact(Host)]
+		public void When_nothing_is_listening()
 		{
-			var listener = new EventingBasicConsumer(channel);
+			var reset = new AutoResetEvent(false);
+			var message = new { Message = "message" };
+			var received = false;
+
+			_factory.Query<int>("some queue", message, response =>
+			{
+				received = true;
+				reset.Set();
+			});
+
+			reset.WaitOne(TimeSpan.FromSeconds(5));
+			received.ShouldBe(false);
+		}
+
+		[RequiresRabbitFact(Host)]
+		public void When_something_else_responds()
+		{
+			CreateResponder(p =>  p.CorrelationId = Guid.NewGuid().ToString());
+
+			var reset = new AutoResetEvent(false);
+			var message = new { Message = "message" };
+			var received = false;
+
+			_factory.Query<int>("some queue", message, response =>
+			{
+				received = true;
+				reset.Set();
+			});
+
+			reset.WaitOne(TimeSpan.FromSeconds(5));
+			received.ShouldBe(false);
+		}
+
+		private void CreateResponder()
+		{
+			CreateResponder(p => { });
+		}
+		private void CreateResponder(Action<IBasicProperties> mangle)
+		{
+
+			_channel.QueueDeclare("some queue", durable: true, exclusive: false, autoDelete: false, arguments: null);
+			_channel.BasicQos(0, 1, false);
+
+			var listener = new EventingBasicConsumer(_channel);
 
 			listener.Received += (s, e) =>
 			{
 				var result = Encoding.UTF8.GetString(e.Body).Length.ToString();
 
-				var props = channel.CreateBasicProperties();
+				var props = _channel.CreateBasicProperties();
 				props.CorrelationId = e.BasicProperties.CorrelationId;
 
-				channel.BasicPublish(
+				mangle(props);
+
+				_channel.BasicPublish(
 					exchange: "",
 					routingKey: e.BasicProperties.ReplyTo,
 					basicProperties: props,
 					body: Encoding.UTF8.GetBytes(result));
-				channel.BasicAck(e.DeliveryTag, false);
+				_channel.BasicAck(e.DeliveryTag, false);
 			};
 
-			channel.BasicConsume("some queue", false, listener);
-		}
-	}
+			_channel.BasicConsume("some queue", false, listener);
 
-	public static class Extensions
-	{
-		public static void Query<TResponse>(this ConnectionFactory factory, string queueName, object message, Action<TResponse> callback)
-		{
-			var connection = factory.CreateConnection();
-			var channel = connection.CreateModel();
-
-			var correlationID = Guid.NewGuid().ToString();
-			var replyTo = channel.QueueDeclare().QueueName;
-
-			var listener = new EventingBasicConsumer(channel);
-			channel.BasicConsume(replyTo, true, listener);
-			listener.Received += (s, e) =>
-			{
-				if (e.BasicProperties.CorrelationId != correlationID)
-					return;
-
-				try
-				{
-					callback(MessageFrom<TResponse>(e.Body));
-				}
-				finally
-				{
-					channel.Dispose();
-					connection.Dispose();
-				}
-			};
-
-			var props = channel.CreateBasicProperties();
-			props.CorrelationId = correlationID;
-			props.ReplyTo = replyTo;
-
-			channel.BasicPublish(
-				exchange: "",
-				routingKey: queueName,
-				basicProperties: props,
-				body: BodyFrom(message));
+			return;
 		}
 
-		private static byte[] BodyFrom(object message)
+		public void Dispose()
 		{
-			var json = JsonConvert.SerializeObject(message);
-			return Encoding.UTF8.GetBytes(json);
-		}
-
-		private static T MessageFrom<T>(byte[] body)
-		{
-			var json = Encoding.UTF8.GetString(body);
-			return JsonConvert.DeserializeObject<T>(json);
+			_channel.Dispose();
+			_connection.Dispose();
 		}
 	}
 }
