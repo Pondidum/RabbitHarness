@@ -19,6 +19,7 @@ namespace RabbitHarness.Tests
 		private readonly IConnection _connection;
 		private readonly IModel _channel;
 		private readonly ConnectionFactory _factory;
+		private readonly QueryContext _context;
 
 		public Scratchpad(ITestOutputHelper output)
 		{
@@ -29,6 +30,7 @@ namespace RabbitHarness.Tests
 			_connection = _factory.CreateConnection();
 			_channel = _connection.CreateModel();
 
+			_context = new QueryContext { QueueName = QueueName };
 		}
 
 		[RequiresRabbitFact(Host)]
@@ -38,8 +40,9 @@ namespace RabbitHarness.Tests
 
 			var reset = new AutoResetEvent(false);
 			var message = new { Message = "message" };
-
-			_factory.Query<int>(QueueName, message, response =>
+			
+			
+			_factory.Query<int>(_context, message, response =>
 			{
 				response.ShouldBe(21);
 				reset.Set();
@@ -55,7 +58,7 @@ namespace RabbitHarness.Tests
 			var message = new { Message = "message" };	
 			var received = false;
 
-			_factory.Query<int>(QueueName, message, response =>
+			_factory.Query<int>(_context, message, response =>
 			{
 				received = true;
 				reset.Set();
@@ -74,7 +77,7 @@ namespace RabbitHarness.Tests
 			var message = new { Message = "message" };
 			var received = false;
 
-			_factory.Query<int>(QueueName, message, response =>
+			_factory.Query<int>(_context, message, response =>
 			{
 				received = true;
 				reset.Set();

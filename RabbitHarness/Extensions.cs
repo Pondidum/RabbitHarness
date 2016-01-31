@@ -10,10 +10,20 @@ namespace RabbitHarness
 	{
 		public static void Query<TResponse>(this ConnectionFactory factory, string queueName, object message, Action<TResponse> callback)
 		{
-			var connection = factory.CreateConnection();
+			var context = new QueryContext
+			{
+				QueueName = queueName,
+			};
+
+			factory.Query(context, message, callback);
+		}
+
+		public static void Query<TResponse>(this ConnectionFactory factory, QueryContext context, object message, Action<TResponse> callback)
+		{
+			var connection = context.CreateConnection(factory);
 			var channel = connection.CreateModel();
 
-			var correlationID = Guid.NewGuid().ToString();
+			var correlationID = context.CreateCorrelationId();
 			var replyTo = channel.QueueDeclare().QueueName;
 
 			var listener = new EventingBasicConsumer(channel);
@@ -39,8 +49,8 @@ namespace RabbitHarness
 			props.ReplyTo = replyTo;
 
 			channel.BasicPublish(
-				exchange: "",
-				routingKey: queueName,
+				exchange: context.ExchangeName,
+				routingKey: context.QueueName,
 				basicProperties: props,
 				body: BodyFrom(message));
 		}
