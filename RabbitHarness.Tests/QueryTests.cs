@@ -16,9 +16,9 @@ namespace RabbitHarness.Tests
 			var message = new { Message = "message" };
 
 
-			Factory.Query<int>(Context, message, (e, response) =>
+			Factory.Query<int>(Context, message, response =>
 			{
-				response.ShouldBe(21);
+				response.Content.ShouldBe(21);
 				reset.Set();
 			});
 
@@ -32,7 +32,7 @@ namespace RabbitHarness.Tests
 			var message = new { Message = "message" };
 			var received = false;
 
-			Factory.Query<int>(Context, message, (e, response) =>
+			Factory.Query<int>(Context, message, response =>
 			{
 				received = true;
 				reset.Set();
@@ -51,7 +51,7 @@ namespace RabbitHarness.Tests
 			var message = new { Message = "message" };
 			var received = false;
 
-			Factory.Query<int>(Context, message, (e, response) =>
+			Factory.Query<int>(Context, message, response =>
 			{
 				received = true;
 				reset.Set();
