@@ -42,7 +42,7 @@ namespace RabbitHarness.Tests
 			var message = new { Message = "message" };
 			
 			
-			_factory.Query<int>(_context, message, response =>
+			_factory.Query<int>(_context, message, (e, response) =>
 			{
 				response.ShouldBe(21);
 				reset.Set();
@@ -58,7 +58,7 @@ namespace RabbitHarness.Tests
 			var message = new { Message = "message" };	
 			var received = false;
 
-			_factory.Query<int>(_context, message, response =>
+			_factory.Query<int>(_context, message, (e, response) =>
 			{
 				received = true;
 				reset.Set();
@@ -77,7 +77,7 @@ namespace RabbitHarness.Tests
 			var message = new { Message = "message" };
 			var received = false;
 
-			_factory.Query<int>(_context, message, response =>
+			_factory.Query<int>(_context, message, (e, response) =>
 			{
 				received = true;
 				reset.Set();
@@ -117,8 +117,6 @@ namespace RabbitHarness.Tests
 			};
 
 			_channel.BasicConsume(QueueName, false, listener);
-
-			return;
 		}
 
 		public void Dispose()

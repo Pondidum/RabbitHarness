@@ -8,7 +8,7 @@ namespace RabbitHarness
 {
 	public static class Extensions
 	{
-		public static void Query<TResponse>(this ConnectionFactory factory, string queueName, object message, Action<TResponse> callback)
+		public static void Query<TResponse>(this ConnectionFactory factory, string queueName, object message, Action<BasicDeliverEventArgs, TResponse> callback)
 		{
 			var context = new QueryContext
 			{
@@ -18,7 +18,7 @@ namespace RabbitHarness
 			factory.Query(context, message, callback);
 		}
 
-		public static void Query<TResponse>(this ConnectionFactory factory, QueryContext context, object message, Action<TResponse> callback)
+		public static void Query<TResponse>(this ConnectionFactory factory, QueryContext context, object message, Action<BasicDeliverEventArgs, TResponse> callback)
 		{
 			var connection = context.CreateConnection(factory);
 			var channel = connection.CreateModel();
@@ -35,7 +35,7 @@ namespace RabbitHarness
 
 				try
 				{
-					callback(MessageFrom<TResponse>(e.Body));
+					callback(e, MessageFrom<TResponse>(e.Body));
 				}
 				finally
 				{
