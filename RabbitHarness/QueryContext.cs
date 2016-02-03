@@ -9,11 +9,13 @@ namespace RabbitHarness
 		public string QueueName { get; set; }
 		public string ExchangeName { get; set; }
 		public Func<string> CreateCorrelationId { get; set; }
+		public Action<IBasicProperties> CustomiseProperties { get; set; }
 
 		public QueryContext()
 		{
 			CreateConnection = f => f.CreateConnection();
 			CreateCorrelationId = () => Guid.NewGuid().ToString();
+			CustomiseProperties = props => { };
 			ExchangeName = "";
 		}
 	}

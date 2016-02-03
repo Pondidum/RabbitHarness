@@ -48,6 +48,8 @@ namespace RabbitHarness
 			props.CorrelationId = correlationID;
 			props.ReplyTo = replyTo;
 
+			context.CustomiseProperties(props);
+
 			channel.BasicPublish(
 				exchange: context.ExchangeName,
 				routingKey: context.QueueName,
