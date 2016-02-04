@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -26,35 +27,46 @@ namespace RabbitHarness
 			var correlationID = context.CreateCorrelationId();
 			var replyTo = channel.QueueDeclare().QueueName;
 
-			var listener = new EventingBasicConsumer(channel);
-			channel.BasicConsume(replyTo, true, listener);
-			listener.Received += (s, e) =>
+			var t = new Task(() =>
 			{
-				if (e.BasicProperties.CorrelationId != correlationID)
-					return;
+
+				var listener = new QueueingBasicConsumer(channel);
+				channel.BasicConsume(replyTo, true, listener);
 
 				try
 				{
-					var rc = new ResponseContext<TResponse>
+					while (true)
 					{
-						Content = MessageFrom<TResponse>(e.Body),
-						Headers = e.BasicProperties,
-					};
 
-					callback(rc);
+						var e = listener.Queue.Dequeue();
+
+						if (e.BasicProperties.CorrelationId != correlationID)
+							continue;
+
+						var rc = new ResponseContext<TResponse>
+						{
+							Content = MessageFrom<TResponse>(e.Body),
+							Headers = e.BasicProperties,
+						};
+
+						callback(rc);
+					}
 				}
 				finally
 				{
 					channel.Dispose();
 					connection.Dispose();
 				}
-			};
+			});
+
 
 			var props = channel.CreateBasicProperties();
 			props.CorrelationId = correlationID;
 			props.ReplyTo = replyTo;
 
 			context.CustomiseProperties(props);
+
+			t.Start();
 
 			channel.BasicPublish(
 				exchange: context.ExchangeName,
