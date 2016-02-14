@@ -10,6 +10,7 @@ namespace RabbitHarness
 		public string ExchangeName { get; set; }
 		public Func<string> CreateCorrelationId { get; set; }
 		public Action<IBasicProperties> CustomiseProperties { get; set; }
+		public Func<AmqpTimestamp> GetTimestamp { get; set; }
 
 		public QueryContext()
 		{
@@ -17,6 +18,9 @@ namespace RabbitHarness
 			CreateCorrelationId = () => Guid.NewGuid().ToString();
 			CustomiseProperties = props => { };
 			ExchangeName = "";
+
+			GetTimestamp = TimeCache.Now;
+
 		}
 	}
 }

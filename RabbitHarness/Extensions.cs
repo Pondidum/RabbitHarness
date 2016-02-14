@@ -63,6 +63,7 @@ namespace RabbitHarness
 			var props = channel.CreateBasicProperties();
 			props.CorrelationId = correlationID;
 			props.ReplyTo = replyTo;
+			props.Timestamp = context.GetTimestamp();
 
 			context.CustomiseProperties(props);
 
