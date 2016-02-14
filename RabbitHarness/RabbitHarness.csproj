@@ -55,6 +55,7 @@
     <Compile Include="Properties\AssemblyVersion.cs" />
     <Compile Include="QueryContext.cs" />
     <Compile Include="ResponseContext.cs" />
+    <Compile Include="TimeCache.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
