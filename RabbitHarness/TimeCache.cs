@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using Microsoft.Win32;
 using RabbitMQ.Client;
 
 namespace RabbitHarness
@@ -13,6 +14,11 @@ namespace RabbitHarness
 		{
 			Stopwatch = new Stopwatch();
 			Reset();
+
+			SystemEvents.TimeChanged += (s, e) =>
+			{
+				Reset();
+			};
 		}
 
 		public static void Reset()
