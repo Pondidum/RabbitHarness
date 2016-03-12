@@ -7,7 +7,7 @@ namespace RabbitHarness.Tests
 {
 	public class TestBase : IDisposable
 	{
-		protected const string Host = "192.168.99.100";
+		public const string Host = "192.168.99.100";
 		protected const string QueueName = "some queue";
 
 		private readonly IConnection _connection;
