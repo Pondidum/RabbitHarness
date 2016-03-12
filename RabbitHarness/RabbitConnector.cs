@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using Newtonsoft.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -14,6 +15,21 @@ namespace RabbitHarness
 			_factory = factory;
 		}
 
+		public void Send(string queueName, Action<IBasicProperties> configureProps, object message)
+		{
+			using (var connection = _factory.CreateConnection())
+			using (var channel = connection.CreateModel())
+			{
+				var json = JsonConvert.SerializeObject(message);
+				var bytes = Encoding.UTF8.GetBytes(json);
+
+				var props = channel.CreateBasicProperties();
+				configureProps(props);
+
+				channel.BasicPublish("", queueName, props, bytes);
+			}
+		}
+
 		public Action ListenTo(string queueName, Func<object, string, bool> handler)
 		{
 			return ListenTo(queueName, options => { }, handler);
@@ -24,6 +40,7 @@ namespace RabbitHarness
 		/// Assumes the message has a UTF8 string body.
 		/// </summary>
 		/// <param name="queueName">The name of the queue or exchange to bind to.</param>
+		/// <param name="declare">Options to declare a queue or exchange before listening starts.</param>
 		/// <param name="handler">return true to Ack the message, false to Nack it.</param>
 		/// <returns>Invoke the action returned to unsubscribe from the queue/exchange.</returns>
 		public Action ListenTo(string queueName, Action<QueueDeclaration> declare, Func<object, string, bool> handler)

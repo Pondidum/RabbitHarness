@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using RabbitMQ.Client;
+using Shouldly;
 
 namespace RabbitHarness.Tests
 {
@@ -13,13 +14,15 @@ namespace RabbitHarness.Tests
 			var connector = new RabbitConnector(factory);
 
 			var reset = new AutoResetEvent(true);
-			connector.ListenTo("someQueue", (props, json) =>
+			var unsubscribe = connector.ListenTo("someQueue", (props, json) =>
 			{
 				reset.Set();
 				return true;
 			});
 
 			reset.WaitOne(TimeSpan.FromSeconds(10));
+
+			unsubscribe();
 		}
 
 		[RequiresRabbitFact(TestBase.Host)]
@@ -29,20 +32,29 @@ namespace RabbitHarness.Tests
 			var connector = new RabbitConnector(factory);
 
 			var reset = new AutoResetEvent(true);
-			connector.ListenTo(
-				"someQueue",
+			var received = "";
+
+			var unsubscribe = connector.ListenTo(
+				"SomeQueue",
 				queue =>
 				{
-					queue.Durable();
 					queue.AutoDelete();
+					queue.DeclareQueue();
 				},
 				(props, json) =>
 				{
+					received = json;
 					reset.Set();
 					return true;
 				});
 
+			connector.Send("SomeQueue", props => { }, new { Name = "Test" });
+
 			reset.WaitOne(TimeSpan.FromSeconds(10));
+
+			received.ShouldBe("{\"Name\":\"Test\"}");
+
+			unsubscribe();
 		}
 	}
 }
