@@ -2,6 +2,7 @@
 using System.Runtime.Remoting.Contexts;
 using System.Text;
 using System.Threading;
+using Newtonsoft.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Shouldly;
@@ -88,6 +89,48 @@ namespace RabbitHarness.Tests
 
 			reset.WaitOne(TimeSpan.FromSeconds(10));
 			received.ShouldBe("{\"Name\":\"Reply\"}");
+		}
+
+		[RequiresRabbitFact(Host)]
+		public void When_nothing_is_listening()
+		{
+			var reset = new AutoResetEvent(false);
+			var message = new { Message = "message" };
+			var received = false;
+
+			var connector = new RabbitConnector(Factory);
+
+			connector.Query(QueueName, declare => { declare.AutoDelete(); declare.DeclareQueue(); }, props => { }, message, (props, json) =>
+			{
+				received = true;
+				reset.Set();
+				return true;
+			});
+
+			reset.WaitOne(TimeSpan.FromSeconds(5));
+			received.ShouldBe(false);
+		}
+
+		[RequiresRabbitFact(Host)]
+		public void When_something_else_responds()
+		{
+			CreateResponder(p => p.CorrelationId = Guid.NewGuid().ToString());
+
+			var reset = new AutoResetEvent(false);
+			var message = new { Message = "message" };
+			var received = false;
+
+			var connector = new RabbitConnector(Factory);
+
+			connector.Query(QueueName, declare => { declare.AutoDelete(); declare.DeclareQueue(); }, props => { }, message, (props, json) =>
+			{
+				received = true;
+				reset.Set();
+				return true;
+			});
+
+			reset.WaitOne(TimeSpan.FromSeconds(5));
+			received.ShouldBe(false);
 		}
 	}
 }
