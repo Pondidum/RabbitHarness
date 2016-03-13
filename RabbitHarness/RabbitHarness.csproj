@@ -52,10 +52,8 @@
     <Compile Include="NetworkTime.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\AssemblyVersion.cs" />
-    <Compile Include="QueryContext.cs" />
     <Compile Include="QueueDeclaration.cs" />
     <Compile Include="RabbitConnector.cs" />
-    <Compile Include="ResponseContext.cs" />
     <Compile Include="TimeCache.cs" />
   </ItemGroup>
   <ItemGroup>
