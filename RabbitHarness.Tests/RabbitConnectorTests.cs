@@ -9,7 +9,7 @@ using Xunit.Abstractions;
 
 namespace RabbitHarness.Tests
 {
-	public class RabbitConnectorTests
+	public class RabbitConnectorTests : TestBase
 	{
 		private ITestOutputHelper _output;
 
@@ -18,17 +18,16 @@ namespace RabbitHarness.Tests
 			_output = output;
 		}
 
-		[RequiresRabbitFact(TestBase.Host)]
+		[RequiresRabbitFact(Host)]
 		public void When_creating_a_queue_and_listening()
 		{
-			var factory = new ConnectionFactory { HostName = TestBase.Host };
-			var connector = new RabbitConnector(factory);
+			var connector = new RabbitConnector(Factory);
 
 			var reset = new AutoResetEvent(false);
 			var received = "";
 
 			var unsubscribe = connector.ListenTo(
-				"SomeQueue",
+				QueueName,
 				queue =>
 				{
 					queue.AutoDelete();
@@ -41,7 +40,7 @@ namespace RabbitHarness.Tests
 					return true;
 				});
 
-			connector.Send("SomeQueue", props => { }, new { Name = "Test" });
+			connector.Send(QueueName, props => { }, new { Name = "Test" });
 
 			reset.WaitOne(TimeSpan.FromSeconds(10));
 
@@ -50,7 +49,7 @@ namespace RabbitHarness.Tests
 			unsubscribe();
 		}
 
-		[RequiresRabbitFact(TestBase.Host)]
+		[RequiresRabbitFact(Host)]
 		public void When_a_reply_is_sent()
 		{
 
@@ -60,13 +59,12 @@ namespace RabbitHarness.Tests
 				queue.DeclareQueue();
 			};
 
-			var factory = new ConnectionFactory { HostName = TestBase.Host };
-			var connector = new RabbitConnector(factory);
+			var connector = new RabbitConnector(Factory);
 
 			var reset = new AutoResetEvent(false);
 			var received = "";
 
-			connector.ListenTo("SomeQueue", declare, (props, json) =>
+			connector.ListenTo(QueueName, declare, (props, json) =>
 			{
 				connector.Send(
 					props.ReplyTo,
@@ -77,7 +75,7 @@ namespace RabbitHarness.Tests
 			});
 
 			connector.Query(
-				"SomeQueue",
+				QueueName,
 				declare,
 				props => { },
 				new { Name = "QueryTest" },

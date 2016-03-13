@@ -7,14 +7,13 @@ namespace RabbitHarness.Tests
 {
 	public class TestBase : IDisposable
 	{
-		public const string Host = "192.168.99.100";
-		protected const string QueueName = "some queue";
+		protected const string Host = "192.168.99.100";
+		protected readonly string QueueName;
 
 		private readonly IConnection _connection;
 		private readonly IModel _channel;
 
 		protected ConnectionFactory Factory { get; }
-		protected QueryContext Context { get; }
 
 		public TestBase()
 		{
@@ -22,8 +21,7 @@ namespace RabbitHarness.Tests
 
 			_connection = Factory.CreateConnection();
 			_channel = _connection.CreateModel();
-
-			Context = new QueryContext { QueueName = QueueName };
+			QueueName = "TestsQueue" + Guid.NewGuid();
 		}
 
 		protected void CreateResponder()
@@ -34,7 +32,7 @@ namespace RabbitHarness.Tests
 		protected void CreateResponder(Action<IBasicProperties> mangle)
 		{
 
-			_channel.QueueDeclare(QueueName, durable: true, exclusive: false, autoDelete: false, arguments: null);
+			_channel.QueueDeclare(QueueName, durable: false, exclusive: false, autoDelete: true, arguments: null);
 			_channel.BasicQos(0, 1, false);
 
 			var listener = new EventingBasicConsumer(_channel);

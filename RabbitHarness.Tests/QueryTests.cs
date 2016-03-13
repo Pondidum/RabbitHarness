@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Threading;
+using Newtonsoft.Json;
 using Shouldly;
 
 namespace RabbitHarness.Tests
 {
 	public class QueryTests : TestBase
 	{
-
 		[RequiresRabbitFact(Host)]
 		public void When_a_reply_is_sent()
 		{
@@ -15,11 +15,14 @@ namespace RabbitHarness.Tests
 			var reset = new AutoResetEvent(false);
 			var message = new { Message = "message" };
 
+			var connector = new RabbitConnector(Factory);
 
-			Factory.Query<int>(Context, message, response =>
+			connector.Query(QueueName, declare => { declare.AutoDelete(); declare.DeclareQueue(); }, props => { }, message, (props, json) =>
 			{
-				response.Content.ShouldBe(21);
+				var result = JsonConvert.DeserializeObject<int>(json);
+				result.ShouldBe(21);
 				reset.Set();
+				return true;
 			});
 
 			reset.WaitOne(TimeSpan.FromSeconds(10));
@@ -32,10 +35,13 @@ namespace RabbitHarness.Tests
 			var message = new { Message = "message" };
 			var received = false;
 
-			Factory.Query<int>(Context, message, response =>
+			var connector = new RabbitConnector(Factory);
+
+			connector.Query(QueueName, declare => { declare.AutoDelete(); declare.DeclareQueue(); }, props => { }, message, (props, json) =>
 			{
 				received = true;
 				reset.Set();
+				return true;
 			});
 
 			reset.WaitOne(TimeSpan.FromSeconds(5));
@@ -51,10 +57,13 @@ namespace RabbitHarness.Tests
 			var message = new { Message = "message" };
 			var received = false;
 
-			Factory.Query<int>(Context, message, response =>
+			var connector = new RabbitConnector(Factory);
+
+			connector.Query(QueueName, declare => { declare.AutoDelete(); declare.DeclareQueue(); }, props => { }, message, (props, json) =>
 			{
 				received = true;
 				reset.Set();
+				return true;
 			});
 
 			reset.WaitOne(TimeSpan.FromSeconds(5));
