@@ -53,13 +53,13 @@ namespace RabbitHarness
 			_exchangeType = type;
 		}
 
-		internal void Apply(string name, IModel channel)
+		internal void Apply(Route route, IModel channel)
 		{
 			if (_declare == Declarations.Queue)
-				channel.QueueDeclare(name, _durable, _exclusive, _autoDelete, _args);
+				channel.QueueDeclare(route.QueueName, _durable, _exclusive, _autoDelete, _args);
 
 			if (_declare == Declarations.Exchange)
-				channel.ExchangeDeclare(name, _exchangeType, _durable, _autoDelete, _args);
+				channel.ExchangeDeclare(route.ExchangeName, _exchangeType, _durable, _autoDelete, _args);
 		}
 
 		private enum Declarations

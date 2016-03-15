@@ -54,6 +54,7 @@
     <Compile Include="Properties\AssemblyVersion.cs" />
     <Compile Include="QueueDeclaration.cs" />
     <Compile Include="RabbitConnector.cs" />
+    <Compile Include="Route.cs" />
     <Compile Include="TimeCache.cs" />
   </ItemGroup>
   <ItemGroup>

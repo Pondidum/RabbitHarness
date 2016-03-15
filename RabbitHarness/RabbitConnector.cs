@@ -16,7 +16,7 @@ namespace RabbitHarness
 			_factory = factory;
 		}
 
-		public void Send(string queueName, Action<IBasicProperties> configureProps, object message)
+		public void Send(Route route, Action<IBasicProperties> configureProps, object message)
 		{
 			using (var connection = _factory.CreateConnection())
 			using (var channel = connection.CreateModel())
@@ -27,13 +27,13 @@ namespace RabbitHarness
 				var props = channel.CreateBasicProperties();
 				configureProps(props);
 
-				channel.BasicPublish("", queueName, props, bytes);
+				channel.BasicPublish(route.ExchangeName, route.QueueName, props, bytes);
 			}
 		}
 
-		public Action ListenTo(string queueName, Func<object, string, bool> handler)
+		public Action ListenTo(Route route, Func<object, string, bool> handler)
 		{
-			return ListenTo(queueName, options => { }, handler);
+			return ListenTo(route, options => { }, handler);
 		}
 
 		/// <summary>
@@ -44,7 +44,7 @@ namespace RabbitHarness
 		/// <param name="declare">Options to declare a queue or exchange before listening starts.</param>
 		/// <param name="handler">return true to Ack the message, false to Nack it.</param>
 		/// <returns>Invoke the action returned to unsubscribe from the queue/exchange.</returns>
-		public Action ListenTo(string queueName, Action<QueueDeclaration> declare, Func<IBasicProperties, string, bool> handler)
+		public Action ListenTo(Route route, Action<QueueDeclaration> declare, Func<IBasicProperties, string, bool> handler)
 		{
 			var connection = _factory.CreateConnection();
 			var channel = connection.CreateModel();
@@ -76,9 +76,9 @@ namespace RabbitHarness
 			var options = new QueueDeclaration();
 			declare(options);
 
-			options.Apply(queueName, channel);
+			options.Apply(route, channel);
 
-			channel.BasicConsume(queueName, true, listener);
+			channel.BasicConsume(route.QueueName, true, listener);
 
 			return () =>
 			{
@@ -89,7 +89,7 @@ namespace RabbitHarness
 			};
 		}
 
-		public void Query(string queueName, Action<QueueDeclaration> declare, Action<IBasicProperties> configureProps, object message, Func<IBasicProperties, string, bool> handler)
+		public void Query(Route route, Action<QueueDeclaration> declare, Action<IBasicProperties> configureProps, object message, Func<IBasicProperties, string, bool> handler)
 		{
 			var connection = _factory.CreateConnection();
 			var channel = connection.CreateModel();
@@ -135,11 +135,11 @@ namespace RabbitHarness
 			var options = new QueueDeclaration();
 			declare(options);
 
-			options.Apply(queueName, channel);
+			options.Apply(route, channel);
 
 			channel.BasicPublish(
-				exchange: "",
-				routingKey: queueName,
+				exchange: route.ExchangeName,
+				routingKey: route.QueueName,
 				basicProperties: props,
 				body: Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message)));
 		}

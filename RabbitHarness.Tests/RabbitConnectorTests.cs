@@ -28,7 +28,7 @@ namespace RabbitHarness.Tests
 			var received = "";
 
 			var unsubscribe = connector.ListenTo(
-				QueueName,
+				Route.Queue(QueueName),
 				queue =>
 				{
 					queue.AutoDelete();
@@ -41,7 +41,7 @@ namespace RabbitHarness.Tests
 					return true;
 				});
 
-			connector.Send(QueueName, props => { }, new { Name = "Test" });
+			connector.Send(Route.Queue(QueueName), props => { }, new { Name = "Test" });
 
 			reset.WaitOne(TimeSpan.FromSeconds(10));
 
@@ -65,10 +65,10 @@ namespace RabbitHarness.Tests
 			var reset = new AutoResetEvent(false);
 			var received = "";
 
-			connector.ListenTo(QueueName, declare, (props, json) =>
+			connector.ListenTo(Route.Queue(QueueName), declare, (props, json) =>
 			{
 				connector.Send(
-					props.ReplyTo,
+					Route.Queue(props.ReplyTo),
 					rp => { rp.CorrelationId = props.CorrelationId; },
 					new { Name = "Reply" });
 
@@ -76,7 +76,7 @@ namespace RabbitHarness.Tests
 			});
 
 			connector.Query(
-				QueueName,
+				Route.Queue(QueueName),
 				declare,
 				props => { },
 				new { Name = "QueryTest" },
@@ -100,7 +100,7 @@ namespace RabbitHarness.Tests
 
 			var connector = new RabbitConnector(Factory);
 
-			connector.Query(QueueName, declare => { declare.AutoDelete(); declare.DeclareQueue(); }, props => { }, message, (props, json) =>
+			connector.Query(Route.Queue(QueueName), declare => { declare.AutoDelete(); declare.DeclareQueue(); }, props => { }, message, (props, json) =>
 			{
 				received = true;
 				reset.Set();
@@ -122,7 +122,7 @@ namespace RabbitHarness.Tests
 
 			var connector = new RabbitConnector(Factory);
 
-			connector.Query(QueueName, declare => { declare.AutoDelete(); declare.DeclareQueue(); }, props => { }, message, (props, json) =>
+			connector.Query(Route.Queue(QueueName), declare => { declare.AutoDelete(); declare.DeclareQueue(); }, props => { }, message, (props, json) =>
 			{
 				received = true;
 				reset.Set();
