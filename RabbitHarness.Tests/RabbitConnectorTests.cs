@@ -1,10 +1,5 @@
 ﻿using System;
-using System.Runtime.Remoting.Contexts;
-using System.Text;
 using System.Threading;
-using Newtonsoft.Json;
-using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
 using Shouldly;
 using Xunit.Abstractions;
 
@@ -29,11 +24,7 @@ namespace RabbitHarness.Tests
 
 			var unsubscribe = connector.ListenTo(
 				Route.Queue(QueueName),
-				queue =>
-				{
-					queue.AutoDelete();
-					queue.DeclareQueue();
-				},
+				declare => declare.Queue().AutoDelete(),
 				(props, json) =>
 				{
 					received = json;
@@ -54,11 +45,7 @@ namespace RabbitHarness.Tests
 		public void When_a_reply_is_sent()
 		{
 
-			Action<QueueDeclaration> declare = queue =>
-			{
-				queue.AutoDelete();
-				queue.DeclareQueue();
-			};
+			Action<DeclarationExpression> declare = d => d.Queue().AutoDelete();
 
 			var connector = new RabbitConnector(Factory);
 
@@ -100,7 +87,7 @@ namespace RabbitHarness.Tests
 
 			var connector = new RabbitConnector(Factory);
 
-			connector.Query(Route.Queue(QueueName), declare => { declare.AutoDelete(); declare.DeclareQueue(); }, props => { }, message, (props, json) =>
+			connector.Query(Route.Queue(QueueName), declare => declare.Queue().AutoDelete(), props => { }, message, (props, json) =>
 			{
 				received = true;
 				reset.Set();
@@ -122,7 +109,7 @@ namespace RabbitHarness.Tests
 
 			var connector = new RabbitConnector(Factory);
 
-			connector.Query(Route.Queue(QueueName), declare => { declare.AutoDelete(); declare.DeclareQueue(); }, props => { }, message, (props, json) =>
+			connector.Query(Route.Queue(QueueName), declare => declare.Queue().AutoDelete(), props => { }, message, (props, json) =>
 			{
 				received = true;
 				reset.Set();

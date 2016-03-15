@@ -44,7 +44,7 @@ namespace RabbitHarness
 		/// <param name="declare">Options to declare a queue or exchange before listening starts.</param>
 		/// <param name="handler">return true to Ack the message, false to Nack it.</param>
 		/// <returns>Invoke the action returned to unsubscribe from the queue/exchange.</returns>
-		public Action ListenTo(Route route, Action<QueueDeclaration> declare, Func<IBasicProperties, string, bool> handler)
+		public Action ListenTo(Route route, Action<DeclarationExpression> declare, Func<IBasicProperties, string, bool> handler)
 		{
 			var connection = _factory.CreateConnection();
 			var channel = connection.CreateModel();
@@ -73,7 +73,7 @@ namespace RabbitHarness
 			var listener = new EventingBasicConsumer(channel);
 			listener.Received += wrapper;
 
-			var options = new QueueDeclaration();
+			var options = new DeclarationExpression();
 			declare(options);
 
 			options.Apply(route, channel);
@@ -89,7 +89,7 @@ namespace RabbitHarness
 			};
 		}
 
-		public void Query(Route route, Action<QueueDeclaration> declare, Action<IBasicProperties> configureProps, object message, Func<IBasicProperties, string, bool> handler)
+		public void Query(Route route, Action<DeclarationExpression> declare, Action<IBasicProperties> configureProps, object message, Func<IBasicProperties, string, bool> handler)
 		{
 			var connection = _factory.CreateConnection();
 			var channel = connection.CreateModel();
@@ -132,7 +132,7 @@ namespace RabbitHarness
 
 			t.Start();
 
-			var options = new QueueDeclaration();
+			var options = new DeclarationExpression();
 			declare(options);
 
 			options.Apply(route, channel);
