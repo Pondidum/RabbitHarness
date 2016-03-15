@@ -53,7 +53,7 @@ gulp.task('compile', [ "restore", "version" ], function() {
     }));
 });
 
-gulp.task('test', [ "compile" ], function() {
+var test = function() {
   return gulp
     .src(['**/bin/*/*.Tests.dll'], { read: false })
     .pipe(xunit({
@@ -61,9 +61,13 @@ gulp.task('test', [ "compile" ], function() {
       options: {
         verbose: true,
         nologo: true,
+        parallel: "assemblies"
       }
     }));
-});
+};
+
+gulp.task('testonly', test);
+gulp.task('test', [ "compile" ], test);
 
 gulp.task('pack', [ 'test' ], function () {
   return gulp
