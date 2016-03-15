@@ -7,7 +7,7 @@ using RabbitMQ.Client.Events;
 
 namespace RabbitHarness
 {
-	public class RabbitConnector
+	public class RabbitConnector : IRabbitConnector
 	{
 		private readonly ConnectionFactory _factory;
 
@@ -40,7 +40,7 @@ namespace RabbitHarness
 		/// Listen to a queue or exchange, and run the <param name="handler" /> when a message is received.
 		/// Assumes the message has a UTF8 string body.
 		/// </summary>
-		/// <param name="queueName">The name of the queue or exchange to bind to.</param>
+		/// <param name="route">The names of the queue and/or exchange to bind to.</param>
 		/// <param name="declare">Options to declare a queue or exchange before listening starts.</param>
 		/// <param name="handler">return true to Ack the message, false to Nack it.</param>
 		/// <returns>Invoke the action returned to unsubscribe from the queue/exchange.</returns>
