@@ -2,6 +2,8 @@
 using System.Text;
 using System.Threading;
 using Newtonsoft.Json;
+using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 using Shouldly;
 using Xunit;
 
@@ -226,6 +228,36 @@ namespace RabbitHarness.Tests
 			recieved.ShouldBe(123);
 		}
 
+		[Fact]
+		public void When_querying_a_queue()
+		{
+			var queue = new QueueDefinition
+			{
+				Name = QueueName,
+				AutoDelete = true
+			};
+
+			var unsubscribe = QueueResponder();
+			int recieved = 0;
+			var message = 1234;
+
+			_connector.Query<int>(
+				queue,
+				props => { },
+				message,
+				(props, json) =>
+				{
+					recieved = json;
+					_reset.Set();
+					return true;
+				});
+			
+			_reset.WaitOne(TimeSpan.FromSeconds(5));
+			unsubscribe();
+
+			recieved.ShouldBe(4);
+		}
+
 
 		private void SendToQueue(object message)
 		{
@@ -249,6 +281,43 @@ namespace RabbitHarness.Tests
 
 				channel.BasicPublish(ExchangeName, "", channel.CreateBasicProperties(), bytes);
 			}
+		}
+
+		protected Action QueueResponder()
+		{
+			var connection = Factory.CreateConnection();
+			var channel = connection.CreateModel();
+
+			channel.QueueDeclare(QueueName, durable: false, exclusive: false, autoDelete: true, arguments: null);
+			channel.BasicQos(0, 1, false);
+
+			var listener = new EventingBasicConsumer(channel);
+
+			EventHandler<BasicDeliverEventArgs> handler = (s, e) =>
+			{
+				var result = Encoding.UTF8.GetString(e.Body).Length.ToString();
+
+				var props = channel.CreateBasicProperties();
+				props.CorrelationId = e.BasicProperties.CorrelationId;
+
+				channel.BasicPublish(
+					exchange: "",
+					routingKey: e.BasicProperties.ReplyTo,
+					basicProperties: props,
+					body: Encoding.UTF8.GetBytes(result));
+				channel.BasicAck(e.DeliveryTag, false);
+			};
+
+			listener.Received += handler;
+
+			channel.BasicConsume(QueueName, false, listener);
+
+			return () =>
+			{
+				listener.Received -= handler;
+				channel.Dispose();
+				connection.Dispose();
+			};
 		}
 	}
 }

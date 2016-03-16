@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -111,6 +112,62 @@ namespace RabbitHarness
 
 				channel.BasicPublish(exchangeDefinition.Name, routingKey, props, bytes);
 			}
+		}
+
+
+		public void Query<TMessage>(QueueDefinition queueDefinition, Action<IBasicProperties> customiseProps, object message, Func<IBasicProperties, TMessage, bool> handler)
+		{
+			var connection = _factory.CreateConnection();
+			var channel = connection.CreateModel();
+
+			var correlationID = Guid.NewGuid().ToString();
+			var replyTo = channel.QueueDeclare().QueueName;
+
+			var t = new Task(() =>
+			{
+
+				var listener = new QueueingBasicConsumer(channel);
+				channel.BasicConsume(replyTo, true, listener);
+
+				try
+				{
+					while (true)
+					{
+						var e = listener.Queue.Dequeue();
+
+						if (e.BasicProperties.CorrelationId != correlationID)
+							continue;
+
+						var json = Encoding.UTF8.GetString(e.Body);
+						var reply = JsonConvert.DeserializeObject<TMessage>(json);
+
+						handler(e.BasicProperties, reply);
+						return;
+					}
+				}
+				finally
+				{
+					channel.Dispose();
+					connection.Dispose();
+				}
+			});
+
+
+			var props = channel.CreateBasicProperties();
+			props.CorrelationId = correlationID;
+			props.ReplyTo = replyTo;
+
+			customiseProps(props);
+
+			t.Start();
+
+			queueDefinition.Declare(channel);
+
+			channel.BasicPublish(
+				exchange: "",
+				routingKey: queueDefinition.Name,
+				basicProperties: props,
+				body: Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message)));
 		}
 
 		private static Action Listen<TMessage>(IModel channel, string queueName, Func<IBasicProperties, TMessage, bool> handler)
