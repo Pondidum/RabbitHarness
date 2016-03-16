@@ -22,29 +22,7 @@ namespace RabbitHarness
 			var connection = _factory.CreateConnection();
 			var channel = connection.CreateModel();
 
-			var wrapper = new EventHandler<BasicDeliverEventArgs>((s, e) =>
-			{
-				try
-				{
-					var json = Encoding.UTF8.GetString(e.Body);
-					var message = JsonConvert.DeserializeObject<TMessage>(json);
-
-					var success = handler(e.BasicProperties, message);
-
-					if (success)
-						channel.BasicAck(e.DeliveryTag, multiple: false);
-					else
-						channel.BasicNack(e.DeliveryTag, multiple: false, requeue: true);
-
-				}
-				catch (Exception)
-				{
-					channel.BasicNack(e.DeliveryTag, multiple: false, requeue: true);
-					throw;
-				}
-
-			});
-
+			var wrapper = WrapHandler(channel, handler);
 			var listener = new EventingBasicConsumer(channel);
 			listener.Received += wrapper;
 
@@ -68,29 +46,7 @@ namespace RabbitHarness
 			var connection = _factory.CreateConnection();
 			var channel = connection.CreateModel();
 
-			var wrapper = new EventHandler<BasicDeliverEventArgs>((s, e) =>
-			{
-				try
-				{
-					var json = Encoding.UTF8.GetString(e.Body);
-					var message = JsonConvert.DeserializeObject<TMessage>(json);
-
-					var success = handler(e.BasicProperties, message);
-
-					if (success)
-						channel.BasicAck(e.DeliveryTag, multiple: false);
-					else
-						channel.BasicNack(e.DeliveryTag, multiple: false, requeue: true);
-
-				}
-				catch (Exception)
-				{
-					channel.BasicNack(e.DeliveryTag, multiple: false, requeue: true);
-					throw;
-				}
-
-			});
-
+			var wrapper = WrapHandler(channel, handler);
 			var listener = new EventingBasicConsumer(channel);
 			listener.Received += wrapper;
 
@@ -118,29 +74,7 @@ namespace RabbitHarness
 			var connection = _factory.CreateConnection();
 			var channel = connection.CreateModel();
 
-			var wrapper = new EventHandler<BasicDeliverEventArgs>((s, e) =>
-			{
-				try
-				{
-					var json = Encoding.UTF8.GetString(e.Body);
-					var message = JsonConvert.DeserializeObject<TMessage>(json);
-
-					var success = handler(e.BasicProperties, message);
-
-					if (success)
-						channel.BasicAck(e.DeliveryTag, multiple: false);
-					else
-						channel.BasicNack(e.DeliveryTag, multiple: false, requeue: true);
-
-				}
-				catch (Exception)
-				{
-					channel.BasicNack(e.DeliveryTag, multiple: false, requeue: true);
-					throw;
-				}
-
-			});
-
+			var wrapper = WrapHandler(channel, handler);
 			var listener = new EventingBasicConsumer(channel);
 			listener.Received += wrapper;
 
@@ -161,6 +95,31 @@ namespace RabbitHarness
 				channel.Dispose();
 				connection.Dispose();
 			};
+		}
+
+		private static EventHandler<BasicDeliverEventArgs> WrapHandler<TMessage>(IModel channel, Func<IBasicProperties, TMessage, bool> handler)
+		{
+			var wrapper = new EventHandler<BasicDeliverEventArgs>((s, e) =>
+			{
+				try
+				{
+					var json = Encoding.UTF8.GetString(e.Body);
+					var message = JsonConvert.DeserializeObject<TMessage>(json);
+
+					var success = handler(e.BasicProperties, message);
+
+					if (success)
+						channel.BasicAck(e.DeliveryTag, multiple: false);
+					else
+						channel.BasicNack(e.DeliveryTag, multiple: false, requeue: true);
+				}
+				catch (Exception)
+				{
+					channel.BasicNack(e.DeliveryTag, multiple: false, requeue: true);
+					throw;
+				}
+			});
+			return wrapper;
 		}
 
 		public void SendTo(QueueDefinition queueDefinition, Action<IBasicProperties> customiseProps, object message)
