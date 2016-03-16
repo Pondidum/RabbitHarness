@@ -164,6 +164,33 @@ namespace RabbitHarness.Tests
 			recieved.ShouldBe(1235);
 		}
 
+		[Fact]
+		public void When_sending_to_an_exchange()
+		{
+			var exchange = new ExchangeDefinition
+			{
+				Name = ExchangeName,
+				AutoDelete = true,
+				Type = "direct"
+			};
+
+			int recieved = 0;
+
+			var unsubscribe = _connector.ListenTo<int>(
+				exchange,
+				(props, json) =>
+				{
+					recieved = json;
+					_reset.Set();
+					return true;
+				});
+
+			_connector.SendTo(exchange, props => { }, 123);
+			_reset.WaitOne(TimeSpan.FromSeconds(5));
+
+			recieved.ShouldBe(123);
+		}
+
 		private void SendToQueue(object message)
 		{
 			using (var connection = Factory.CreateConnection())

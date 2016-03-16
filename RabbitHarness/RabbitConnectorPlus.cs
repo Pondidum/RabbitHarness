@@ -205,6 +205,28 @@ namespace RabbitHarness
 				channel.BasicPublish("", queueDefinition.Name, props, bytes);
 			}
 		}
+
+		public void SendTo(ExchangeDefinition exchangeDefinition, Action<IBasicProperties> customiseProps, object message)
+		{
+			using (var connection = _factory.CreateConnection())
+			using (var channel = connection.CreateModel())
+			{
+				channel.ExchangeDeclare(
+					exchangeDefinition.Name,
+					exchangeDefinition.Type,
+					exchangeDefinition.Durable,
+					exchangeDefinition.AutoDelete,
+					exchangeDefinition.Args);
+
+				var json = JsonConvert.SerializeObject(message);
+				var bytes = Encoding.UTF8.GetBytes(json);
+
+				var props = channel.CreateBasicProperties();
+				customiseProps(props);
+
+				channel.BasicPublish(exchangeDefinition.Name, "", props, bytes);
+			}
+		}
 	}
 
 	public class ExchangeDefinition
