@@ -191,6 +191,42 @@ namespace RabbitHarness.Tests
 			recieved.ShouldBe(123);
 		}
 
+		[Fact]
+		public void When_sending_to_an_exchange_with_a_routing_key()
+		{
+			var exchange = new ExchangeDefinition
+			{
+				Name = ExchangeName,
+				AutoDelete = true,
+				Type = "direct"
+			};
+
+			var queue = new QueueDefinition
+			{
+				Name = QueueName,
+				AutoDelete = true,
+				RoutingKeys = new []{ "some.key" }
+			};
+
+			int recieved = 0;
+
+			var unsubscribe = _connector.ListenTo<int>(
+				exchange,
+				queue,
+				(props, json) =>
+				{
+					recieved = json;
+					_reset.Set();
+					return true;
+				});
+
+			_connector.SendTo(exchange, "some.key", props => { }, 123);
+			_reset.WaitOne(TimeSpan.FromSeconds(5));
+
+			recieved.ShouldBe(123);
+		}
+
+
 		private void SendToQueue(object message)
 		{
 			using (var connection = Factory.CreateConnection())

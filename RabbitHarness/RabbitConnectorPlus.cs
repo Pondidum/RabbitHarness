@@ -208,6 +208,11 @@ namespace RabbitHarness
 
 		public void SendTo(ExchangeDefinition exchangeDefinition, Action<IBasicProperties> customiseProps, object message)
 		{
+			SendTo(exchangeDefinition, "", customiseProps, message);
+		}
+
+		public void SendTo(ExchangeDefinition exchangeDefinition, string routingKey, Action<IBasicProperties> customiseProps, object message)
+		{
 			using (var connection = _factory.CreateConnection())
 			using (var channel = connection.CreateModel())
 			{
@@ -224,7 +229,7 @@ namespace RabbitHarness
 				var props = channel.CreateBasicProperties();
 				customiseProps(props);
 
-				channel.BasicPublish(exchangeDefinition.Name, "", props, bytes);
+				channel.BasicPublish(exchangeDefinition.Name, routingKey, props, bytes);
 			}
 		}
 	}
