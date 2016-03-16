@@ -48,12 +48,7 @@ namespace RabbitHarness
 			var listener = new EventingBasicConsumer(channel);
 			listener.Received += wrapper;
 
-			channel.QueueDeclare(
-				queueDefinition.Name,
-				queueDefinition.Durable,
-				queueDefinition.Exclusive,
-				queueDefinition.AutoDelete,
-				queueDefinition.Args);
+			queueDefinition.Declare(channel);
 
 			channel.BasicConsume(
 				queueDefinition.Name,
@@ -99,19 +94,8 @@ namespace RabbitHarness
 			var listener = new EventingBasicConsumer(channel);
 			listener.Received += wrapper;
 
-			channel.ExchangeDeclare(
-				exchangeDefinition.Name,
-				exchangeDefinition.Type,
-				exchangeDefinition.Durable,
-				exchangeDefinition.AutoDelete,
-				exchangeDefinition.Args);
-
-			channel.QueueDeclare(
-				queueDefinition.Name,
-				queueDefinition.Durable,
-				queueDefinition.Exclusive,
-				queueDefinition.AutoDelete,
-				queueDefinition.Args);
+			exchangeDefinition.Declare(channel);
+			queueDefinition.Declare(channel);
 
 			foreach (var key in queueDefinition.RoutingKeys)
 				channel.QueueBind(queueDefinition.Name, exchangeDefinition.Name, key);
@@ -160,12 +144,7 @@ namespace RabbitHarness
 			var listener = new EventingBasicConsumer(channel);
 			listener.Received += wrapper;
 
-			channel.ExchangeDeclare(
-				exchangeDefinition.Name,
-				exchangeDefinition.Type,
-				exchangeDefinition.Durable,
-				exchangeDefinition.AutoDelete,
-				exchangeDefinition.Args);
+			exchangeDefinition.Declare(channel);
 
 			var queue = channel.QueueDeclare();
 
@@ -189,12 +168,7 @@ namespace RabbitHarness
 			using (var connection = _factory.CreateConnection())
 			using (var channel = connection.CreateModel())
 			{
-				channel.QueueDeclare(
-					queueDefinition.Name,
-					queueDefinition.Durable,
-					queueDefinition.Exclusive,
-					queueDefinition.AutoDelete,
-					queueDefinition.Args);
+				queueDefinition.Declare(channel);
 
 				var json = JsonConvert.SerializeObject(message);
 				var bytes = Encoding.UTF8.GetBytes(json);
@@ -216,12 +190,7 @@ namespace RabbitHarness
 			using (var connection = _factory.CreateConnection())
 			using (var channel = connection.CreateModel())
 			{
-				channel.ExchangeDeclare(
-					exchangeDefinition.Name,
-					exchangeDefinition.Type,
-					exchangeDefinition.Durable,
-					exchangeDefinition.AutoDelete,
-					exchangeDefinition.Args);
+				exchangeDefinition.Declare(channel);
 
 				var json = JsonConvert.SerializeObject(message);
 				var bytes = Encoding.UTF8.GetBytes(json);
@@ -241,6 +210,16 @@ namespace RabbitHarness
 		public bool AutoDelete { get; set; }
 		public bool Durable { get; set; }
 		public IDictionary<string, object> Args { get; set; }
+
+		public virtual void Declare(IModel channel)
+		{
+			channel.ExchangeDeclare(
+				Name,
+				Type,
+				Durable,
+				AutoDelete,
+				Args);
+		}
 	}
 
 	public class QueueDefinition
@@ -259,6 +238,16 @@ namespace RabbitHarness
 		public QueueDefinition()
 		{
 			RoutingKeys = new[] { "" };
+		}
+
+		public virtual void Declare(IModel channel)
+		{
+			channel.QueueDeclare(
+				Name,
+				Durable,
+				Exclusive,
+				AutoDelete,
+				Args);
 		}
 	}
 }
