@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
@@ -22,20 +21,13 @@ namespace RabbitHarness
 			var connection = _factory.CreateConnection();
 			var channel = connection.CreateModel();
 
-			var wrapper = WrapHandler(channel, handler);
-			var listener = new EventingBasicConsumer(channel);
-			listener.Received += wrapper;
-
 			queueDefinition.Declare(channel);
 
-			channel.BasicConsume(
-				queueDefinition.Name,
-				noAck:
-				true, consumer: listener);
+			var unsubscribe = Listen(channel, queueDefinition.Name, handler);
 
 			return () =>
 			{
-				listener.Received -= wrapper;
+				unsubscribe();
 				channel.Dispose();
 				connection.Dispose();
 			};
@@ -46,24 +38,17 @@ namespace RabbitHarness
 			var connection = _factory.CreateConnection();
 			var channel = connection.CreateModel();
 
-			var wrapper = WrapHandler(channel, handler);
-			var listener = new EventingBasicConsumer(channel);
-			listener.Received += wrapper;
-
 			exchangeDefinition.Declare(channel);
 			queueDefinition.Declare(channel);
 
 			foreach (var key in queueDefinition.RoutingKeys)
 				channel.QueueBind(queueDefinition.Name, exchangeDefinition.Name, key);
 
-			channel.BasicConsume(
-				queueDefinition.Name,
-				noAck:
-				true, consumer: listener);
+			var unsubscribe = Listen(channel, queueDefinition.Name, handler);
 
 			return () =>
 			{
-				listener.Received -= wrapper;
+				unsubscribe();
 				channel.Dispose();
 				connection.Dispose();
 			};
@@ -74,52 +59,19 @@ namespace RabbitHarness
 			var connection = _factory.CreateConnection();
 			var channel = connection.CreateModel();
 
-			var wrapper = WrapHandler(channel, handler);
-			var listener = new EventingBasicConsumer(channel);
-			listener.Received += wrapper;
-
+			var queueName = channel.QueueDeclare();
 			exchangeDefinition.Declare(channel);
 
-			var queue = channel.QueueDeclare();
+			channel.QueueBind(queueName, exchangeDefinition.Name, "");
 
-			channel.QueueBind(queue, exchangeDefinition.Name, "");
-
-			channel.BasicConsume(
-				queue,
-				noAck:
-				true, consumer: listener);
+			var unsubscribe = Listen(channel, queueName, handler);
 
 			return () =>
 			{
-				listener.Received -= wrapper;
+				unsubscribe();
 				channel.Dispose();
 				connection.Dispose();
 			};
-		}
-
-		private static EventHandler<BasicDeliverEventArgs> WrapHandler<TMessage>(IModel channel, Func<IBasicProperties, TMessage, bool> handler)
-		{
-			var wrapper = new EventHandler<BasicDeliverEventArgs>((s, e) =>
-			{
-				try
-				{
-					var json = Encoding.UTF8.GetString(e.Body);
-					var message = JsonConvert.DeserializeObject<TMessage>(json);
-
-					var success = handler(e.BasicProperties, message);
-
-					if (success)
-						channel.BasicAck(e.DeliveryTag, multiple: false);
-					else
-						channel.BasicNack(e.DeliveryTag, multiple: false, requeue: true);
-				}
-				catch (Exception)
-				{
-					channel.BasicNack(e.DeliveryTag, multiple: false, requeue: true);
-					throw;
-				}
-			});
-			return wrapper;
 		}
 
 		public void SendTo(QueueDefinition queueDefinition, Action<IBasicProperties> customiseProps, object message)
@@ -159,6 +111,43 @@ namespace RabbitHarness
 
 				channel.BasicPublish(exchangeDefinition.Name, routingKey, props, bytes);
 			}
+		}
+
+		private static Action Listen<TMessage>(IModel channel, string queueName, Func<IBasicProperties, TMessage, bool> handler)
+		{
+			var wrapper = new EventHandler<BasicDeliverEventArgs>((s, e) =>
+			{
+				try
+				{
+					var json = Encoding.UTF8.GetString(e.Body);
+					var message = JsonConvert.DeserializeObject<TMessage>(json);
+
+					var success = handler(e.BasicProperties, message);
+
+					if (success)
+						channel.BasicAck(e.DeliveryTag, multiple: false);
+					else
+						channel.BasicNack(e.DeliveryTag, multiple: false, requeue: true);
+				}
+				catch (Exception)
+				{
+					channel.BasicNack(e.DeliveryTag, multiple: false, requeue: true);
+					throw;
+				}
+			});
+
+			var listener = new EventingBasicConsumer(channel);
+			listener.Received += wrapper;
+
+			channel.BasicConsume(
+				queueName,
+				noAck: true,
+				consumer: listener);
+
+			return () =>
+			{
+				listener.Received -= wrapper;
+			};
 		}
 	}
 
