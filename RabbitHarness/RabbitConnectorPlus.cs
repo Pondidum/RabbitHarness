@@ -183,6 +183,28 @@ namespace RabbitHarness
 				connection.Dispose();
 			};
 		}
+
+		public void SendTo(QueueDefinition queueDefinition, Action<IBasicProperties> customiseProps, object message)
+		{
+			using (var connection = _factory.CreateConnection())
+			using (var channel = connection.CreateModel())
+			{
+				channel.QueueDeclare(
+					queueDefinition.Name,
+					queueDefinition.Durable,
+					queueDefinition.Exclusive,
+					queueDefinition.AutoDelete,
+					queueDefinition.Args);
+
+				var json = JsonConvert.SerializeObject(message);
+				var bytes = Encoding.UTF8.GetBytes(json);
+
+				var props = channel.CreateBasicProperties();
+				customiseProps(props);
+
+				channel.BasicPublish("", queueDefinition.Name, props, bytes);
+			}
+		}
 	}
 
 	public class ExchangeDefinition

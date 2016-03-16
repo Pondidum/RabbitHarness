@@ -137,6 +137,33 @@ namespace RabbitHarness.Tests
 			recieved.ShouldBe(123);
 		}
 
+		[Fact]
+		public void When_sending_to_a_queue()
+		{
+			var queue = new QueueDefinition
+			{
+				Name = QueueName,
+				AutoDelete = true
+			};
+
+			int recieved = 0;
+
+			_connector.ListenTo<int>(
+				queue,
+				(props, json) =>
+				{
+					recieved = json;
+					_reset.Set();
+					return true;
+				});
+
+			_connector.SendTo(queue, props => { }, 1235);
+			
+			_reset.WaitOne(TimeSpan.FromSeconds(5));
+
+			recieved.ShouldBe(1235);
+		}
+
 		private void SendToQueue(object message)
 		{
 			using (var connection = Factory.CreateConnection())
