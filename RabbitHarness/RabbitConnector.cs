@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -16,80 +17,105 @@ namespace RabbitHarness
 			_factory = factory;
 		}
 
-		public void Send(Route route, Action<IBasicProperties> configureProps, object message)
-		{
-			using (var connection = _factory.CreateConnection())
-			using (var channel = connection.CreateModel())
-			{
-				var json = JsonConvert.SerializeObject(message);
-				var bytes = Encoding.UTF8.GetBytes(json);
-
-				var props = channel.CreateBasicProperties();
-				configureProps(props);
-
-				channel.BasicPublish(route.ExchangeName, route.QueueName, props, bytes);
-			}
-		}
-
-		public Action ListenTo(Route route, Func<object, string, bool> handler)
-		{
-			return ListenTo(route, options => { }, handler);
-		}
-
-		/// <summary>
-		/// Listen to a queue or exchange, and run the <param name="handler" /> when a message is received.
-		/// Assumes the message has a UTF8 string body.
-		/// </summary>
-		/// <param name="route">The names of the queue and/or exchange to bind to.</param>
-		/// <param name="declare">Options to declare a queue or exchange before listening starts.</param>
-		/// <param name="handler">return true to Ack the message, false to Nack it.</param>
-		/// <returns>Invoke the action returned to unsubscribe from the queue/exchange.</returns>
-		public Action ListenTo(Route route, Action<DeclarationExpression> declare, Func<IBasicProperties, string, bool> handler)
+		public Action ListenTo<TMessage>(QueueDefinition queueDefinition, Func<IBasicProperties, TMessage, bool> handler)
 		{
 			var connection = _factory.CreateConnection();
 			var channel = connection.CreateModel();
 
-			var wrapper = new EventHandler<BasicDeliverEventArgs>((s, e) =>
-			{
-				try
-				{
-					var json = Encoding.UTF8.GetString(e.Body);
-					var success = handler(e.BasicProperties, json);
+			queueDefinition.Declare(channel);
 
-					if (success)
-						channel.BasicAck(e.DeliveryTag, multiple: false);
-					else
-						channel.BasicNack(e.DeliveryTag, multiple: false, requeue: true);
-
-				}
-				catch (Exception)
-				{
-					channel.BasicNack(e.DeliveryTag, multiple: false, requeue: true);
-					throw;
-				}
-
-			});
-
-			var listener = new EventingBasicConsumer(channel);
-			listener.Received += wrapper;
-
-			var options = new DeclarationExpression();
-			declare(options);
-
-			options.Apply(route, channel);
-
-			channel.BasicConsume(route.QueueName, true, listener);
+			var unsubscribe = Listen(channel, queueDefinition.Name, handler);
 
 			return () =>
 			{
-				listener.Received -= wrapper;
-
+				unsubscribe();
 				channel.Dispose();
 				connection.Dispose();
 			};
 		}
 
-		public void Query(Route route, Action<DeclarationExpression> declare, Action<IBasicProperties> configureProps, object message, Func<IBasicProperties, string, bool> handler)
+		public Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, QueueDefinition queueDefinition, Func<IBasicProperties, TMessage, bool> handler)
+		{
+			var connection = _factory.CreateConnection();
+			var channel = connection.CreateModel();
+
+			exchangeDefinition.Declare(channel);
+			queueDefinition.Declare(channel);
+
+			foreach (var key in queueDefinition.RoutingKeys)
+				channel.QueueBind(queueDefinition.Name, exchangeDefinition.Name, key);
+
+			var unsubscribe = Listen(channel, queueDefinition.Name, handler);
+
+			return () =>
+			{
+				unsubscribe();
+				channel.Dispose();
+				connection.Dispose();
+			};
+		}
+
+		public Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, Func<IBasicProperties, TMessage, bool> handler)
+		{
+			var connection = _factory.CreateConnection();
+			var channel = connection.CreateModel();
+
+			var queueName = channel.QueueDeclare();
+			exchangeDefinition.Declare(channel);
+
+			channel.QueueBind(queueName, exchangeDefinition.Name, "");
+
+			var unsubscribe = Listen(channel, queueName, handler);
+
+			return () =>
+			{
+				unsubscribe();
+				channel.Dispose();
+				connection.Dispose();
+			};
+		}
+
+		public void SendTo(QueueDefinition queueDefinition, Action<IBasicProperties> customiseProps, object message)
+		{
+			using (var connection = _factory.CreateConnection())
+			using (var channel = connection.CreateModel())
+			{
+				queueDefinition.Declare(channel);
+
+				var json = JsonConvert.SerializeObject(message);
+				var bytes = Encoding.UTF8.GetBytes(json);
+
+				var props = channel.CreateBasicProperties();
+				customiseProps(props);
+
+				channel.BasicPublish("", queueDefinition.Name, props, bytes);
+			}
+		}
+
+		public void SendTo(ExchangeDefinition exchangeDefinition, Action<IBasicProperties> customiseProps, object message)
+		{
+			SendTo(exchangeDefinition, "", customiseProps, message);
+		}
+
+		public void SendTo(ExchangeDefinition exchangeDefinition, string routingKey, Action<IBasicProperties> customiseProps, object message)
+		{
+			using (var connection = _factory.CreateConnection())
+			using (var channel = connection.CreateModel())
+			{
+				exchangeDefinition.Declare(channel);
+
+				var json = JsonConvert.SerializeObject(message);
+				var bytes = Encoding.UTF8.GetBytes(json);
+
+				var props = channel.CreateBasicProperties();
+				customiseProps(props);
+
+				channel.BasicPublish(exchangeDefinition.Name, routingKey, props, bytes);
+			}
+		}
+
+
+		public void Query<TMessage>(QueueDefinition queueDefinition, Action<IBasicProperties> customiseProps, object message, Func<IBasicProperties, TMessage, bool> handler)
 		{
 			var connection = _factory.CreateConnection();
 			var channel = connection.CreateModel();
@@ -112,7 +138,10 @@ namespace RabbitHarness
 						if (e.BasicProperties.CorrelationId != correlationID)
 							continue;
 
-						handler(e.BasicProperties, Encoding.UTF8.GetString(e.Body));
+						var json = Encoding.UTF8.GetString(e.Body);
+						var reply = JsonConvert.DeserializeObject<TMessage>(json);
+
+						handler(e.BasicProperties, reply);
 						return;
 					}
 				}
@@ -128,20 +157,157 @@ namespace RabbitHarness
 			props.CorrelationId = correlationID;
 			props.ReplyTo = replyTo;
 
-			configureProps(props);
+			customiseProps(props);
 
 			t.Start();
 
-			var options = new DeclarationExpression();
-			declare(options);
-
-			options.Apply(route, channel);
+			queueDefinition.Declare(channel);
 
 			channel.BasicPublish(
-				exchange: route.ExchangeName,
-				routingKey: route.QueueName,
+				exchange: "",
+				routingKey: queueDefinition.Name,
 				basicProperties: props,
 				body: Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message)));
+		}
+
+		public void Query<TMessage>(ExchangeDefinition exchangeDefinition, Action<IBasicProperties> customiseProps, object message, Func<IBasicProperties, TMessage, bool> handler)
+		{
+			var connection = _factory.CreateConnection();
+			var channel = connection.CreateModel();
+
+			var correlationID = Guid.NewGuid().ToString();
+			var replyTo = channel.QueueDeclare().QueueName;
+
+			var t = new Task(() =>
+			{
+
+				var listener = new QueueingBasicConsumer(channel);
+				channel.BasicConsume(replyTo, true, listener);
+
+				try
+				{
+					while (true)
+					{
+						var e = listener.Queue.Dequeue();
+
+						if (e.BasicProperties.CorrelationId != correlationID)
+							continue;
+
+						var json = Encoding.UTF8.GetString(e.Body);
+						var reply = JsonConvert.DeserializeObject<TMessage>(json);
+
+						handler(e.BasicProperties, reply);
+						return;
+					}
+				}
+				finally
+				{
+					channel.Dispose();
+					connection.Dispose();
+				}
+			});
+
+
+			var props = channel.CreateBasicProperties();
+			props.CorrelationId = correlationID;
+			props.ReplyTo = replyTo;
+
+			customiseProps(props);
+
+			t.Start();
+
+			exchangeDefinition.Declare(channel);
+
+			channel.BasicPublish(
+				exchange: exchangeDefinition.Name,
+				routingKey: "",
+				basicProperties: props,
+				body: Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message)));
+		}
+
+		private static Action Listen<TMessage>(IModel channel, string queueName, Func<IBasicProperties, TMessage, bool> handler)
+		{
+			var wrapper = new EventHandler<BasicDeliverEventArgs>((s, e) =>
+			{
+				try
+				{
+					var json = Encoding.UTF8.GetString(e.Body);
+					var message = JsonConvert.DeserializeObject<TMessage>(json);
+
+					var success = handler(e.BasicProperties, message);
+
+					if (success)
+						channel.BasicAck(e.DeliveryTag, multiple: false);
+					else
+						channel.BasicNack(e.DeliveryTag, multiple: false, requeue: true);
+				}
+				catch (Exception)
+				{
+					channel.BasicNack(e.DeliveryTag, multiple: false, requeue: true);
+					throw;
+				}
+			});
+
+			var listener = new EventingBasicConsumer(channel);
+			listener.Received += wrapper;
+
+			channel.BasicConsume(
+				queueName,
+				noAck: true,
+				consumer: listener);
+
+			return () =>
+			{
+				listener.Received -= wrapper;
+			};
+		}
+	}
+
+	public class ExchangeDefinition
+	{
+		public string Name { get; set; }
+		public string Type { get; set; }
+		public bool AutoDelete { get; set; }
+		public bool Durable { get; set; }
+		public IDictionary<string, object> Args { get; set; }
+
+		public virtual void Declare(IModel channel)
+		{
+			channel.ExchangeDeclare(
+				Name,
+				Type,
+				Durable,
+				AutoDelete,
+				Args);
+		}
+	}
+
+	public class QueueDefinition
+	{
+		public string Name { get; set; }
+		public bool AutoDelete { get; set; }
+		public bool Exclusive { get; set; }
+		public bool Durable { get; set; }
+		public IDictionary<string, object> Args { get; set; }
+
+		/// <summary>
+		/// Only applies when binding to an exchange
+		/// </summary>
+		public IEnumerable<string> RoutingKeys { get; set; }
+
+		public QueueDefinition()
+		{
+			RoutingKeys = new[] { "" };
+		}
+
+		public virtual void Declare(IModel channel)
+		{
+			channel.QueueDeclare(
+				Name,
+				Durable,
+				Exclusive,
+				AutoDelete,
+				Args);
 		}
 	}
 }

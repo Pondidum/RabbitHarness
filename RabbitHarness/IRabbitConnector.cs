@@ -5,19 +5,15 @@ namespace RabbitHarness
 {
 	public interface IRabbitConnector
 	{
-		void Send(Route route, Action<IBasicProperties> configureProps, object message);
-		Action ListenTo(Route route, Func<object, string, bool> handler);
+		Action ListenTo<TMessage>(QueueDefinition queueDefinition, Func<IBasicProperties, TMessage, bool> handler);
+		Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, QueueDefinition queueDefinition, Func<IBasicProperties, TMessage, bool> handler);
+		Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, Func<IBasicProperties, TMessage, bool> handler);
 
-		/// <summary>
-		/// Listen to a queue or exchange, and run the <param name="handler" /> when a message is received.
-		/// Assumes the message has a UTF8 string body.
-		/// </summary>
-		/// <param name="route">The names of the queue and/or exchange to bind to.</param>
-		/// <param name="declare">Options to declare a queue or exchange before listening starts.</param>
-		/// <param name="handler">return true to Ack the message, false to Nack it.</param>
-		/// <returns>Invoke the action returned to unsubscribe from the queue/exchange.</returns>
-		Action ListenTo(Route route, Action<DeclarationExpression> declare, Func<IBasicProperties, string, bool> handler);
+		void SendTo(QueueDefinition queueDefinition, Action<IBasicProperties> customiseProps, object message);
+		void SendTo(ExchangeDefinition exchangeDefinition, Action<IBasicProperties> customiseProps, object message);
+		void SendTo(ExchangeDefinition exchangeDefinition, string routingKey, Action<IBasicProperties> customiseProps, object message);
 
-		void Query(Route route, Action<DeclarationExpression> declare, Action<IBasicProperties> configureProps, object message, Func<IBasicProperties, string, bool> handler);
+		void Query<TMessage>(QueueDefinition queueDefinition, Action<IBasicProperties> customiseProps, object message, Func<IBasicProperties, TMessage, bool> handler);
+		void Query<TMessage>(ExchangeDefinition exchangeDefinition, Action<IBasicProperties> customiseProps, object message, Func<IBasicProperties, TMessage, bool> handler);
 	}
 }
