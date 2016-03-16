@@ -24,11 +24,7 @@ namespace RabbitHarness.Tests
 			QueueName = "TestsQueue" + Guid.NewGuid();
 		}
 
-		protected void CreateResponder()
-		{
-			CreateResponder(p => { });
-		}
-
+		
 		protected void CreateResponder(Action<IBasicProperties> mangle)
 		{
 
