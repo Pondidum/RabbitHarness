@@ -9,6 +9,7 @@ namespace RabbitHarness.Tests
 	{
 		protected const string Host = "192.168.99.100";
 		protected readonly string QueueName;
+		protected readonly string ExchangeName;
 
 		private readonly IConnection _connection;
 		private readonly IModel _channel;
@@ -22,6 +23,7 @@ namespace RabbitHarness.Tests
 			_connection = Factory.CreateConnection();
 			_channel = _connection.CreateModel();
 			QueueName = "TestsQueue" + Guid.NewGuid();
+			ExchangeName = "TestExchange" + Guid.NewGuid();
 		}
 
 		
@@ -56,6 +58,7 @@ namespace RabbitHarness.Tests
 		public void Dispose()
 		{
 			_channel.QueueDelete(QueueName);
+			_channel.ExchangeDelete(ExchangeName);
 			_channel.Dispose();
 			_connection.Dispose();
 		}
