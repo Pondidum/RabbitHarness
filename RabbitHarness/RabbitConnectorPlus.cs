@@ -66,6 +66,8 @@ namespace RabbitHarness
 				connection.Dispose();
 			};
 		}
+
+
 	}
 
 	public class QueueDefinition

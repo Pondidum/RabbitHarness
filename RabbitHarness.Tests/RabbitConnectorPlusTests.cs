@@ -39,6 +39,41 @@ namespace RabbitHarness.Tests
 		}
 
 
+		[Fact]
+		public void When_listening_to_a_queue_and_unsubscribed()
+		{
+			var connector = new RabbitConnectorPlus(Factory);
+
+			var queue = new QueueDefinition
+			{
+				Name = QueueName,
+				AutoDelete = true
+			};
+
+			var reset = new AutoResetEvent(false);
+			int recieved = 0;
+
+			var unsubscribe = connector.ListenTo<int>(
+				queue,
+				(props, json) =>
+				{
+					recieved = json;
+					reset.Set();
+					return true;
+				});
+
+			Send(123);
+			reset.WaitOne(TimeSpan.FromSeconds(5));
+
+			unsubscribe();
+
+			Send(456);
+			reset.WaitOne(TimeSpan.FromSeconds(5));
+
+			recieved.ShouldBe(123);
+		}
+
+
 		private void Send(object message)
 		{
 			using (var connection = Factory.CreateConnection())
