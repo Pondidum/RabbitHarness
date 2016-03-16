@@ -77,7 +77,7 @@ namespace RabbitHarness.Tests
 		}
 
 		[Fact]
-		public void When_listening_to_an_exchange()
+		public void When_listening_to_an_exchange_with_a_custom_queue()
 		{
 			var exchange = new ExchangeDefinition
 			{
@@ -110,6 +110,32 @@ namespace RabbitHarness.Tests
 			recieved.ShouldBe(123);
 		}
 
+		[Fact]
+		public void When_listening_to_an_exchange_with_an_auto_queue()
+		{
+			var exchange = new ExchangeDefinition
+			{
+				Name = ExchangeName,
+				AutoDelete = true,
+				Type = "direct"
+			};
+
+			int recieved = 0;
+
+			var unsubscribe = _connector.ListenTo<int>(
+				exchange,
+				(props, json) =>
+				{
+					recieved = json;
+					_reset.Set();
+					return true;
+				});
+
+			SendToExchange(123);
+			_reset.WaitOne(TimeSpan.FromSeconds(5));
+
+			recieved.ShouldBe(123);
+		}
 
 		private void SendToQueue(object message)
 		{

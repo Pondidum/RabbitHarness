@@ -129,6 +129,60 @@ namespace RabbitHarness
 			};
 		}
 
+		public Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, Func<IBasicProperties, TMessage, bool> handler)
+		{
+			var connection = _factory.CreateConnection();
+			var channel = connection.CreateModel();
+
+			var wrapper = new EventHandler<BasicDeliverEventArgs>((s, e) =>
+			{
+				try
+				{
+					var json = Encoding.UTF8.GetString(e.Body);
+					var message = JsonConvert.DeserializeObject<TMessage>(json);
+
+					var success = handler(e.BasicProperties, message);
+
+					if (success)
+						channel.BasicAck(e.DeliveryTag, multiple: false);
+					else
+						channel.BasicNack(e.DeliveryTag, multiple: false, requeue: true);
+
+				}
+				catch (Exception)
+				{
+					channel.BasicNack(e.DeliveryTag, multiple: false, requeue: true);
+					throw;
+				}
+
+			});
+
+			var listener = new EventingBasicConsumer(channel);
+			listener.Received += wrapper;
+
+			channel.ExchangeDeclare(
+				exchangeDefinition.Name,
+				exchangeDefinition.Type,
+				exchangeDefinition.Durable,
+				exchangeDefinition.AutoDelete,
+				exchangeDefinition.Args);
+
+			var queue = channel.QueueDeclare();
+
+			channel.QueueBind(queue, exchangeDefinition.Name, "");
+
+			channel.BasicConsume(
+				queue,
+				noAck:
+				true, consumer: listener);
+
+			return () =>
+			{
+				listener.Received -= wrapper;
+				channel.Dispose();
+				connection.Dispose();
+			};
+		}
 	}
 
 	public class ExchangeDefinition
