@@ -23,7 +23,7 @@ namespace RabbitHarness.Tests
 		[Fact]
 		public void When_listening_to_a_queue()
 		{
-			var queue = new QueueDefinition 
+			var queue = new QueueDefinition
 			{
 				Name = QueueName,
 				AutoDelete = true
@@ -160,7 +160,7 @@ namespace RabbitHarness.Tests
 				});
 
 			_connector.SendTo(queue, props => { }, 1235);
-			
+
 			_reset.WaitOne(TimeSpan.FromSeconds(5));
 
 			recieved.ShouldBe(1235);
@@ -207,7 +207,7 @@ namespace RabbitHarness.Tests
 			{
 				Name = QueueName,
 				AutoDelete = true,
-				RoutingKeys = new []{ "some.key" }
+				RoutingKeys = new[] { "some.key" }
 			};
 
 			int recieved = 0;
@@ -251,13 +251,43 @@ namespace RabbitHarness.Tests
 					_reset.Set();
 					return true;
 				});
-			
+
 			_reset.WaitOne(TimeSpan.FromSeconds(5));
 			unsubscribe();
 
 			recieved.ShouldBe(4);
 		}
 
+		[Fact]
+		public void When_querying_an_exchange()
+		{
+			var exchange = new ExchangeDefinition
+			{
+				Name = ExchangeName,
+				AutoDelete = true,
+				Type = "direct"
+			};
+
+			var unsubscribe = ExchangeResponder();
+			int recieved = 0;
+			var message = 1234;
+
+			_connector.Query<int>(
+				exchange,
+				props => { },
+				message,
+				(props, json) =>
+				{
+					recieved = json;
+					_reset.Set();
+					return true;
+				});
+
+			_reset.WaitOne(TimeSpan.FromSeconds(5));
+			unsubscribe();
+
+			recieved.ShouldBe(4);
+		}
 
 		private void SendToQueue(object message)
 		{
@@ -311,6 +341,46 @@ namespace RabbitHarness.Tests
 			listener.Received += handler;
 
 			channel.BasicConsume(QueueName, false, listener);
+
+			return () =>
+			{
+				listener.Received -= handler;
+				channel.Dispose();
+				connection.Dispose();
+			};
+		}
+
+		protected Action ExchangeResponder()
+		{
+			var connection = Factory.CreateConnection();
+			var channel = connection.CreateModel();
+
+			channel.ExchangeDeclare(ExchangeName, "direct", durable: false, autoDelete: true, arguments: null);
+			var queueName = channel.QueueDeclare();
+
+			channel.BasicQos(0, 1, false);
+			channel.QueueBind(queueName, ExchangeName, "");
+
+			var listener = new EventingBasicConsumer(channel);
+
+			EventHandler<BasicDeliverEventArgs> handler = (s, e) =>
+			{
+				var result = Encoding.UTF8.GetString(e.Body).Length.ToString();
+
+				var props = channel.CreateBasicProperties();
+				props.CorrelationId = e.BasicProperties.CorrelationId;
+
+				channel.BasicPublish(
+					exchange: "",
+					routingKey: e.BasicProperties.ReplyTo,
+					basicProperties: props,
+					body: Encoding.UTF8.GetBytes(result));
+				channel.BasicAck(e.DeliveryTag, false);
+			};
+
+			listener.Received += handler;
+
+			channel.BasicConsume(queueName, false, listener);
 
 			return () =>
 			{

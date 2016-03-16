@@ -170,6 +170,61 @@ namespace RabbitHarness
 				body: Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message)));
 		}
 
+		public void Query<TMessage>(ExchangeDefinition exchangeDefinition, Action<IBasicProperties> customiseProps, object message, Func<IBasicProperties, TMessage, bool> handler)
+		{
+			var connection = _factory.CreateConnection();
+			var channel = connection.CreateModel();
+
+			var correlationID = Guid.NewGuid().ToString();
+			var replyTo = channel.QueueDeclare().QueueName;
+
+			var t = new Task(() =>
+			{
+
+				var listener = new QueueingBasicConsumer(channel);
+				channel.BasicConsume(replyTo, true, listener);
+
+				try
+				{
+					while (true)
+					{
+						var e = listener.Queue.Dequeue();
+
+						if (e.BasicProperties.CorrelationId != correlationID)
+							continue;
+
+						var json = Encoding.UTF8.GetString(e.Body);
+						var reply = JsonConvert.DeserializeObject<TMessage>(json);
+
+						handler(e.BasicProperties, reply);
+						return;
+					}
+				}
+				finally
+				{
+					channel.Dispose();
+					connection.Dispose();
+				}
+			});
+
+
+			var props = channel.CreateBasicProperties();
+			props.CorrelationId = correlationID;
+			props.ReplyTo = replyTo;
+
+			customiseProps(props);
+
+			t.Start();
+
+			exchangeDefinition.Declare(channel);
+
+			channel.BasicPublish(
+				exchange: exchangeDefinition.Name,
+				routingKey: "",
+				basicProperties: props,
+				body: Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message)));
+		}
+
 		private static Action Listen<TMessage>(IModel channel, string queueName, Func<IBasicProperties, TMessage, bool> handler)
 		{
 			var wrapper = new EventHandler<BasicDeliverEventArgs>((s, e) =>
