@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -260,54 +259,6 @@ namespace RabbitHarness
 			{
 				listener.Received -= wrapper;
 			};
-		}
-	}
-
-	public class ExchangeDefinition
-	{
-		public string Name { get; set; }
-		public string Type { get; set; }
-		public bool AutoDelete { get; set; }
-		public bool Durable { get; set; }
-		public IDictionary<string, object> Args { get; set; }
-
-		public virtual void Declare(IModel channel)
-		{
-			channel.ExchangeDeclare(
-				Name,
-				Type,
-				Durable,
-				AutoDelete,
-				Args);
-		}
-	}
-
-	public class QueueDefinition
-	{
-		public string Name { get; set; }
-		public bool AutoDelete { get; set; }
-		public bool Exclusive { get; set; }
-		public bool Durable { get; set; }
-		public IDictionary<string, object> Args { get; set; }
-
-		/// <summary>
-		/// Only applies when binding to an exchange
-		/// </summary>
-		public IEnumerable<string> RoutingKeys { get; set; }
-
-		public QueueDefinition()
-		{
-			RoutingKeys = new[] { "" };
-		}
-
-		public virtual void Declare(IModel channel)
-		{
-			channel.QueueDeclare(
-				Name,
-				Durable,
-				Exclusive,
-				AutoDelete,
-				Args);
 		}
 	}
 }
