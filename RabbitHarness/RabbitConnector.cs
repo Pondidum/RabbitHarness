@@ -9,6 +9,8 @@ namespace RabbitHarness
 {
 	public class RabbitConnector : IRabbitConnector
 	{
+		private const string DefaultRoutingKey = "";
+
 		private readonly ConnectionFactory _factory;
 
 		public RabbitConnector(ConnectionFactory factory)
@@ -56,13 +58,18 @@ namespace RabbitHarness
 
 		public Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, Func<IBasicProperties, TMessage, bool> handler)
 		{
+			return ListenTo(exchangeDefinition, DefaultRoutingKey, handler);
+		}
+
+		public Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, string routingKey, Func<IBasicProperties, TMessage, bool> handler)
+		{
 			var connection = _factory.CreateConnection();
 			var channel = connection.CreateModel();
 
 			var queueName = channel.QueueDeclare();
 			exchangeDefinition.Declare(channel);
 
-			channel.QueueBind(queueName, exchangeDefinition.Name, "");
+			channel.QueueBind(queueName, exchangeDefinition.Name, routingKey);
 
 			var unsubscribe = Listen(channel, queueName, handler);
 
@@ -93,7 +100,7 @@ namespace RabbitHarness
 
 		public void SendTo(ExchangeDefinition exchangeDefinition, Action<IBasicProperties> customiseProps, object message)
 		{
-			SendTo(exchangeDefinition, "", customiseProps, message);
+			SendTo(exchangeDefinition, DefaultRoutingKey, customiseProps, message);
 		}
 
 		public void SendTo(ExchangeDefinition exchangeDefinition, string routingKey, Action<IBasicProperties> customiseProps, object message)
@@ -171,6 +178,11 @@ namespace RabbitHarness
 
 		public void Query<TMessage>(ExchangeDefinition exchangeDefinition, Action<IBasicProperties> customiseProps, object message, Func<IBasicProperties, TMessage, bool> handler)
 		{
+			Query(exchangeDefinition, DefaultRoutingKey, customiseProps, message, handler);
+		}
+
+		public void Query<TMessage>(ExchangeDefinition exchangeDefinition, string routingKey, Action<IBasicProperties> customiseProps, object message, Func<IBasicProperties, TMessage, bool> handler)
+		{
 			var connection = _factory.CreateConnection();
 			var channel = connection.CreateModel();
 
@@ -219,7 +231,7 @@ namespace RabbitHarness
 
 			channel.BasicPublish(
 				exchange: exchangeDefinition.Name,
-				routingKey: "",
+				routingKey: routingKey,
 				basicProperties: props,
 				body: Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message)));
 		}
