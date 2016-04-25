@@ -29,6 +29,8 @@ namespace RabbitHarness
 				Exclusive,
 				AutoDelete,
 				Args);
+
+			channel.BasicQos(0, 1, false);
 		}
 	}
 }
