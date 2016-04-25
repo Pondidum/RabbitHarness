@@ -264,7 +264,7 @@ namespace RabbitHarness
 
 			channel.BasicConsume(
 				queueName,
-				noAck: true,
+				noAck: false,
 				consumer: listener);
 
 			return () =>
