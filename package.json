@@ -1,6 +1,6 @@
 {
   "name": "RabbitHarness",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "dependencies": {
     "gulp": "^3.9.0",
     "gulp-bump": "^1.0.0",
