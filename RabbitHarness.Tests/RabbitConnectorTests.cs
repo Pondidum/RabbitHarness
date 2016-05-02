@@ -2,6 +2,7 @@
 using System.Text;
 using System.Threading;
 using Newtonsoft.Json;
+using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Shouldly;
 using Xunit;
@@ -80,11 +81,9 @@ namespace RabbitHarness.Tests
 		[RequiresRabbitFact(Host)]
 		public void When_listening_to_an_exchange_with_a_custom_queue()
 		{
-			var exchange = new ExchangeDefinition
+			var exchange = new ExchangeDefinition(ExchangeName, ExchangeType.Direct)
 			{
-				Name = ExchangeName,
-				AutoDelete = true,
-				Type = "direct"
+				AutoDelete = true
 			};
 
 			var queue = new QueueDefinition
@@ -114,11 +113,9 @@ namespace RabbitHarness.Tests
 		[RequiresRabbitFact(Host)]
 		public void When_listening_to_an_exchange_with_an_auto_queue()
 		{
-			var exchange = new ExchangeDefinition
+			var exchange = new ExchangeDefinition(ExchangeName, ExchangeType.Direct)
 			{
-				Name = ExchangeName,
-				AutoDelete = true,
-				Type = "direct"
+				AutoDelete = true
 			};
 
 			int recieved = 0;
@@ -168,11 +165,9 @@ namespace RabbitHarness.Tests
 		[RequiresRabbitFact(Host)]
 		public void When_sending_to_an_exchange()
 		{
-			var exchange = new ExchangeDefinition
+			var exchange = new ExchangeDefinition(ExchangeName, ExchangeType.Direct)
 			{
-				Name = ExchangeName,
-				AutoDelete = true,
-				Type = "direct"
+				AutoDelete = true
 			};
 
 			int recieved = 0;
@@ -195,11 +190,9 @@ namespace RabbitHarness.Tests
 		[RequiresRabbitFact(Host)]
 		public void When_sending_to_an_exchange_with_a_routing_key()
 		{
-			var exchange = new ExchangeDefinition
+			var exchange = new ExchangeDefinition(ExchangeName, ExchangeType.Direct)
 			{
-				Name = ExchangeName,
-				AutoDelete = true,
-				Type = "direct"
+				AutoDelete = true
 			};
 
 			var queue = new QueueDefinition
@@ -260,11 +253,9 @@ namespace RabbitHarness.Tests
 		[RequiresRabbitFact(Host)]
 		public void When_querying_an_exchange()
 		{
-			var exchange = new ExchangeDefinition
+			var exchange = new ExchangeDefinition(ExchangeName, ExchangeType.Direct)
 			{
-				Name = ExchangeName,
-				AutoDelete = true,
-				Type = "direct"
+				AutoDelete = true
 			};
 
 			var unsubscribe = ExchangeResponder();
