@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -12,10 +10,18 @@ namespace RabbitHarness
 		private const string DefaultRoutingKey = "";
 
 		private readonly ConnectionFactory _factory;
+		private readonly IMessageHandler _messageHandler;
 
 		public RabbitConnector(ConnectionFactory factory)
+			: this(factory, new DefaultMessageHandler())
+		{
+			
+		}
+
+		public RabbitConnector(ConnectionFactory factory, IMessageHandler messageHandler)
 		{
 			_factory = factory;
+			_messageHandler = messageHandler;
 		}
 
 		public Action ListenTo<TMessage>(QueueDefinition queueDefinition, Func<IBasicProperties, TMessage, bool> handler)
@@ -88,8 +94,7 @@ namespace RabbitHarness
 			{
 				queueDefinition.Declare(channel);
 
-				var json = JsonConvert.SerializeObject(message);
-				var bytes = Encoding.UTF8.GetBytes(json);
+				var bytes = _messageHandler.Serialize(message);
 
 				var props = channel.CreateBasicProperties();
 				customiseProps(props);
@@ -110,8 +115,7 @@ namespace RabbitHarness
 			{
 				exchangeDefinition.Declare(channel);
 
-				var json = JsonConvert.SerializeObject(message);
-				var bytes = Encoding.UTF8.GetBytes(json);
+				var bytes = _messageHandler.Serialize(message);
 
 				var props = channel.CreateBasicProperties();
 				customiseProps(props);
@@ -144,8 +148,7 @@ namespace RabbitHarness
 						if (e.BasicProperties.CorrelationId != correlationID)
 							continue;
 
-						var json = Encoding.UTF8.GetString(e.Body);
-						var reply = JsonConvert.DeserializeObject<TMessage>(json);
+						var reply = _messageHandler.Deserialize<TMessage>(e.Body);
 
 						handler(e.BasicProperties, reply);
 						return;
@@ -173,7 +176,7 @@ namespace RabbitHarness
 				exchange: "",
 				routingKey: queueDefinition.Name,
 				basicProperties: props,
-				body: Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message)));
+				body: _messageHandler.Serialize(message));
 		}
 
 		public void Query<TMessage>(ExchangeDefinition exchangeDefinition, Action<IBasicProperties> customiseProps, object message, Func<IBasicProperties, TMessage, bool> handler)
@@ -204,8 +207,7 @@ namespace RabbitHarness
 						if (e.BasicProperties.CorrelationId != correlationID)
 							continue;
 
-						var json = Encoding.UTF8.GetString(e.Body);
-						var reply = JsonConvert.DeserializeObject<TMessage>(json);
+						var reply = _messageHandler.Deserialize<TMessage>(e.Body);
 
 						handler(e.BasicProperties, reply);
 						return;
@@ -233,17 +235,16 @@ namespace RabbitHarness
 				exchange: exchangeDefinition.Name,
 				routingKey: routingKey,
 				basicProperties: props,
-				body: Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message)));
+				body: _messageHandler.Serialize(message));
 		}
 
-		private static Action Listen<TMessage>(IModel channel, string queueName, Func<IBasicProperties, TMessage, bool> handler)
+		private Action Listen<TMessage>(IModel channel, string queueName, Func<IBasicProperties, TMessage, bool> handler)
 		{
 			var wrapper = new EventHandler<BasicDeliverEventArgs>((s, e) =>
 			{
 				try
 				{
-					var json = Encoding.UTF8.GetString(e.Body);
-					var message = JsonConvert.DeserializeObject<TMessage>(json);
+					var message = _messageHandler.Deserialize<TMessage>(e.Body);
 
 					var success = handler(e.BasicProperties, message);
 

@@ -48,8 +48,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DefaultMessageHandler.cs" />
     <Compile Include="ExchangeDefinition.cs" />
     <Compile Include="Extensions.cs" />
+    <Compile Include="IMessageHandler.cs" />
     <Compile Include="IRabbitConnector.cs" />
     <Compile Include="NetworkTime.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
