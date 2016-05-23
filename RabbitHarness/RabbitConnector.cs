@@ -15,7 +15,7 @@ namespace RabbitHarness
 		public RabbitConnector(ConnectionFactory factory)
 			: this(factory, new DefaultMessageHandler())
 		{
-			
+
 		}
 
 		public RabbitConnector(ConnectionFactory factory, IMessageHandler messageHandler)
@@ -130,8 +130,12 @@ namespace RabbitHarness
 			var connection = _factory.CreateConnection();
 			var channel = connection.CreateModel();
 
-			var correlationID = Guid.NewGuid().ToString();
 			var replyTo = channel.QueueDeclare().QueueName;
+
+			var props = channel.CreateBasicProperties();
+			customiseProps(props);
+			props.CorrelationId = props.CorrelationId ?? Guid.NewGuid().ToString();
+			props.ReplyTo = replyTo;
 
 			var t = new Task(() =>
 			{
@@ -145,7 +149,7 @@ namespace RabbitHarness
 					{
 						var e = listener.Queue.Dequeue();
 
-						if (e.BasicProperties.CorrelationId != correlationID)
+						if (e.BasicProperties.CorrelationId != props.CorrelationId)
 							continue;
 
 						var reply = _messageHandler.Deserialize<TMessage>(e.Body);
@@ -160,13 +164,6 @@ namespace RabbitHarness
 					connection.Dispose();
 				}
 			});
-
-
-			var props = channel.CreateBasicProperties();
-			props.CorrelationId = correlationID;
-			props.ReplyTo = replyTo;
-
-			customiseProps(props);
 
 			t.Start();
 
