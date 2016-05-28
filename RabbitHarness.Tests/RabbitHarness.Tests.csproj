@@ -71,6 +71,7 @@
     <Compile Include="Extensions\ToTimestampTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RabbitConnectorTests.cs" />
+    <Compile Include="RawMessageHandlerDecoratorTests.cs" />
     <Compile Include="RequiresRabbitFactAttribute.cs" />
     <Compile Include="Scratchpad.cs" />
     <Compile Include="TestBase.cs" />

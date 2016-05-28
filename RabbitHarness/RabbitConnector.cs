@@ -21,7 +21,7 @@ namespace RabbitHarness
 		public RabbitConnector(ConnectionFactory factory, IMessageHandler messageHandler)
 		{
 			_factory = factory;
-			_messageHandler = messageHandler;
+			_messageHandler = new RawMessageHandlerDecorator(messageHandler);
 		}
 
 		public Action ListenTo<TMessage>(QueueDefinition queueDefinition, Func<IBasicProperties, TMessage, bool> handler)

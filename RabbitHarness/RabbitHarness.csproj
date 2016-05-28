@@ -58,6 +58,7 @@
     <Compile Include="Properties\AssemblyVersion.cs" />
     <Compile Include="QueueDefinition.cs" />
     <Compile Include="RabbitConnector.cs" />
+    <Compile Include="RawMessageHandlerDecorator.cs" />
     <Compile Include="TimeCache.cs" />
   </ItemGroup>
   <ItemGroup>
