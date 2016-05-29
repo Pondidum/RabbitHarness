@@ -46,6 +46,30 @@ namespace RabbitHarness.Tests
 			recieved.ShouldBe(123);
 		}
 
+		[RequiresRabbitFact(Host)]
+		public void When_listening_to_a_queue_and_the_message_is_not_acknowleged()
+		{
+			var queue = new QueueDefinition
+			{
+				Name = QueueName,
+				AutoDelete = true
+			};
+
+			var recieved = 0;
+
+			_connector.ListenTo<int>(
+				queue,
+				(props, message) =>
+				{
+					recieved++;
+					return recieved > 1;
+				});
+
+			SendToQueue(123);
+			_reset.WaitOne(TimeSpan.FromSeconds(5));
+
+			recieved.ShouldBe(2);
+		}
 
 		[RequiresRabbitFact(Host)]
 		public void When_listening_to_a_queue_and_unsubscribed()
