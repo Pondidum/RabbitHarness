@@ -12,12 +12,13 @@ namespace RabbitHarness.Tests
 	public class RabbitConnectorTests : TestBase
 	{
 		private readonly AutoResetEvent _reset;
-		private readonly RabbitConnector _connector;
+		private readonly IRabbitConnector _connector;
 
 		public RabbitConnectorTests()
 		{
 			_reset = new AutoResetEvent(false);
 			_connector = new RabbitConnector(Factory);
+			//_connector = new InMemoryConnector();
 		}
 
 		[RequiresRabbitFact(Host)]
@@ -305,14 +306,10 @@ namespace RabbitHarness.Tests
 
 		private void SendToQueue(object message)
 		{
-			using (var connection = Factory.CreateConnection())
-			using (var channel = connection.CreateModel())
-			{
-				var json = JsonConvert.SerializeObject(message);
-				var bytes = Encoding.UTF8.GetBytes(json);
-
-				channel.BasicPublish("", QueueName, channel.CreateBasicProperties(), bytes);
-			}
+			_connector.SendTo(
+				new QueueDefinition { Name = QueueName, AutoDelete = true },
+				props => { },
+				message);
 		}
 
 		private void SendToExchange(object message)
