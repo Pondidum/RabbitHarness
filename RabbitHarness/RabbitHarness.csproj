@@ -52,6 +52,7 @@
     <Compile Include="ExchangeDefinition.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="IMessageHandler.cs" />
+    <Compile Include="InMemoryConnector.cs" />
     <Compile Include="IRabbitConnector.cs" />
     <Compile Include="NetworkTime.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
