@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using RabbitMQ.Client;
 
 namespace RabbitHarness
@@ -23,12 +24,13 @@ namespace RabbitHarness
 
 		public virtual void Declare(IModel channel)
 		{
-			channel.QueueDeclare(
-				Name,
-				Durable,
-				Exclusive,
-				AutoDelete,
-				Args);
+			if (Name.StartsWith("amq.", StringComparison.OrdinalIgnoreCase) == false)
+				channel.QueueDeclare(
+					Name,
+					Durable,
+					Exclusive,
+					AutoDelete,
+					Args);
 
 			channel.BasicQos(0, 1, false);
 		}
