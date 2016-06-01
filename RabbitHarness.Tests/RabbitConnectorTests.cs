@@ -326,39 +326,17 @@ namespace RabbitHarness.Tests
 
 		protected Action QueueResponder()
 		{
-			var connection = Factory.CreateConnection();
-			var channel = connection.CreateModel();
+			var queue = new QueueDefinition { Name = QueueName, AutoDelete = true };
 
-			channel.QueueDeclare(QueueName, durable: false, exclusive: false, autoDelete: true, arguments: null);
-			channel.BasicQos(0, 1, false);
-
-			var listener = new EventingBasicConsumer(channel);
-
-			EventHandler<BasicDeliverEventArgs> handler = (s, e) =>
+			return _connector.ListenTo<int>(queue, (props, message) =>
 			{
-				var result = Encoding.UTF8.GetString(e.Body).Length.ToString();
-
-				var props = channel.CreateBasicProperties();
-				props.CorrelationId = e.BasicProperties.CorrelationId;
-
-				channel.BasicPublish(
-					exchange: "",
-					routingKey: e.BasicProperties.ReplyTo,
-					basicProperties: props,
-					body: Encoding.UTF8.GetBytes(result));
-				channel.BasicAck(e.DeliveryTag, false);
-			};
-
-			listener.Received += handler;
-
-			channel.BasicConsume(QueueName, false, listener);
-
-			return () =>
-			{
-				listener.Received -= handler;
-				channel.Dispose();
-				connection.Dispose();
-			};
+				var result = message.ToString().Length;
+				_connector.SendTo(
+					new QueueDefinition { Name = props.ReplyTo },
+					p => { p.CorrelationId = props.CorrelationId; },
+					result);
+				return true;
+			});
 		}
 
 		protected Action ExchangeResponder()
