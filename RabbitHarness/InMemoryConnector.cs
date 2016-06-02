@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Framing;
 
@@ -76,7 +77,9 @@ namespace RabbitHarness
 			if (_queues.TryGetValue(queueDefinition.Name, out handlers) == false)
 				return;
 
-			handlers.ForEach(handler => handler(props, message));
+			handlers
+				.ToList()
+				.ForEach(handler => handler(props, message));
 		}
 
 		public void SendTo(ExchangeDefinition exchangeDefinition, Action<IBasicProperties> customiseProps, object message)
