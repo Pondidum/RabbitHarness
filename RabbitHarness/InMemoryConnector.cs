@@ -117,7 +117,17 @@ namespace RabbitHarness
 
 		public void Query<TMessage>(ExchangeDefinition exchangeDefinition, Action<IBasicProperties> customiseProps, object message, Func<IBasicProperties, TMessage, bool> handler)
 		{
-			throw new NotImplementedException();
+			var reply = Guid.NewGuid().ToString();
+
+			Action unsubscribe = null;
+
+			unsubscribe = ListenTo<TMessage>(new QueueDefinition { Name = reply }, (p, m) =>
+			{
+				unsubscribe();
+				return handler(p, m);
+			});
+
+			SendTo(exchangeDefinition, props => props.ReplyTo = reply, message);
 		}
 
 		public void Query<TMessage>(ExchangeDefinition exchangeDefinition, string routingKey, Action<IBasicProperties> customiseProps, object message, Func<IBasicProperties, TMessage, bool> handler)
