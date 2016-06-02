@@ -27,7 +27,14 @@ namespace RabbitHarness
 				_queues[queueDefinition.Name] = handlers;
 			}
 
-			Func<IBasicProperties, object, bool> wrapped = (props, message) => handler(props, (TMessage)message);
+			Func<IBasicProperties, object, bool> wrapped = (props, message) =>
+			{
+				while (handler(props, (TMessage)message) == false)
+				{
+				}
+
+				return true;
+			};
 
 			handlers.Add(wrapped);
 
