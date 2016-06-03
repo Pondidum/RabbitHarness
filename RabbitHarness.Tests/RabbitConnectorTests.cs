@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Text;
 using System.Threading;
-using Newtonsoft.Json;
 using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
 using Shouldly;
-using Xunit;
 
 namespace RabbitHarness.Tests
 {
@@ -314,14 +310,10 @@ namespace RabbitHarness.Tests
 
 		private void SendToExchange(object message)
 		{
-			using (var connection = Factory.CreateConnection())
-			using (var channel = connection.CreateModel())
-			{
-				var json = JsonConvert.SerializeObject(message);
-				var bytes = Encoding.UTF8.GetBytes(json);
-
-				channel.BasicPublish(ExchangeName, "", channel.CreateBasicProperties(), bytes);
-			}
+			_connector.SendTo(
+				new ExchangeDefinition(ExchangeName, ExchangeType.Direct),
+				props => { },
+				message);
 		}
 
 		protected Action QueueResponder()

@@ -46,7 +46,7 @@ namespace RabbitHarness
 
 		public Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, QueueDefinition queueDefinition, Func<IBasicProperties, TMessage, bool> handler)
 		{
-			throw new NotImplementedException();
+			return ListenTo(exchangeDefinition, handler);
 		}
 
 		public Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, Func<IBasicProperties, TMessage, bool> handler)
@@ -71,7 +71,7 @@ namespace RabbitHarness
 
 		public Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, string routingKey, Func<IBasicProperties, TMessage, bool> handler)
 		{
-			throw new NotImplementedException();
+			return ListenTo(exchangeDefinition, handler);
 		}
 
 		public void SendTo(QueueDefinition queueDefinition, Action<IBasicProperties> customiseProps, object message)
@@ -104,7 +104,7 @@ namespace RabbitHarness
 
 		public void SendTo(ExchangeDefinition exchangeDefinition, string routingKey, Action<IBasicProperties> customiseProps, object message)
 		{
-			throw new NotImplementedException();
+			SendTo(exchangeDefinition, customiseProps, message);
 		}
 
 		public void Query<TMessage>(QueueDefinition queueDefinition, Action<IBasicProperties> customiseProps, object message, Func<IBasicProperties, TMessage, bool> handler)
