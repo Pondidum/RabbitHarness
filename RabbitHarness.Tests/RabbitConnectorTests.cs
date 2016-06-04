@@ -311,7 +311,7 @@ namespace RabbitHarness.Tests
 		private void SendToExchange(object message)
 		{
 			_connector.SendTo(
-				new ExchangeDefinition(ExchangeName, ExchangeType.Direct),
+				new ExchangeDefinition(ExchangeName, ExchangeType.Direct) { AutoDelete = true },
 				props => { },
 				message);
 		}
