@@ -6,7 +6,7 @@ using Xunit;
 
 namespace RabbitHarness.Tests
 {
-	public class InMemoryConnectorTests : TestBase
+	public class InMemoryConnectorTests
 	{
 		private InMemoryConnector _connector;
 		private AutoResetEvent _reset;
@@ -18,14 +18,14 @@ namespace RabbitHarness.Tests
 			_reset = new AutoResetEvent(false);
 			_connector = new InMemoryConnector();
 
-			_exchangeDefinition = new ExchangeDefinition(ExchangeName, ExchangeType.Direct)
+			_exchangeDefinition = new ExchangeDefinition("Exchange" + Guid.NewGuid().ToString(), ExchangeType.Direct)
 			{
 				AutoDelete = true
 			};
 
 			_queueDefinition = new QueueDefinition
 			{
-				Name = QueueName,
+				Name = "Queue" + Guid.NewGuid().ToString(),
 				AutoDelete = true,
 				RoutingKeys = new[] { "some.key" }
 			};
