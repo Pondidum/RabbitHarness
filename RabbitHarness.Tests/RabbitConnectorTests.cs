@@ -254,18 +254,15 @@ namespace RabbitHarness.Tests
 			int recieved = 0;
 			var message = 1234;
 
-			_connector.Query<int>(
-				queue,
-				props => { },
-				message,
-				(props, json) =>
+			_connector
+				.Query<int>(queue, props => { }, message)
+				.ContinueWith(response =>
 				{
-					recieved = json;
+					recieved = response.Result.Message;
 					_reset.Set();
-					return true;
-				});
+				})
+				.Wait();
 
-			_reset.WaitOne(TimeSpan.FromSeconds(5));
 			unsubscribe();
 
 			recieved.ShouldBe(4);
@@ -283,18 +280,15 @@ namespace RabbitHarness.Tests
 			int recieved = 0;
 			var message = 1234;
 
-			_connector.Query<int>(
-				exchange,
-				props => { },
-				message,
-				(props, json) =>
+			_connector
+				.Query<int>(exchange, props => { }, message)
+				.ContinueWith(response =>
 				{
-					recieved = json;
+					recieved = response.Result.Message;
 					_reset.Set();
-					return true;
-				});
+				})
+				.Wait();
 
-			_reset.WaitOne(TimeSpan.FromSeconds(5));
 			unsubscribe();
 
 			recieved.ShouldBe(4);

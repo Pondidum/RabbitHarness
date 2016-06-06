@@ -124,8 +124,7 @@ namespace RabbitHarness
 			}
 		}
 
-
-		public void Query<TMessage>(QueueDefinition queueDefinition, Action<IBasicProperties> customiseProps, object message, Func<IBasicProperties, TMessage, bool> handler)
+		public Task<QueryResponse<TMessage>> Query<TMessage>(QueueDefinition queueDefinition, Action<IBasicProperties> customiseProps, object message)
 		{
 			var connection = _factory.CreateConnection();
 			var sendChannel = connection.CreateModel();
@@ -138,37 +137,19 @@ namespace RabbitHarness
 			sendProps.CorrelationId = sendProps.CorrelationId ?? Guid.NewGuid().ToString();
 			sendProps.ReplyTo = replyTo;
 
-			var t = new Task(() =>
+
+			var source = new TaskCompletionSource<QueryResponse<TMessage>>();
+			Action unsubscribe = null;
+
+			unsubscribe = Listen<TMessage>(replyChannel, replyTo, (p, m) =>
 			{
-				queueDefinition.Declare(replyChannel);
+				if (p.CorrelationId != sendProps.CorrelationId)
+					return true;
 
-				var listener = new QueueingBasicConsumer(replyChannel);
-				replyChannel.BasicConsume(replyTo, true, listener);
-
-				try
-				{
-					while (true)
-					{
-						var e = listener.Queue.Dequeue();
-
-						if (e.BasicProperties.CorrelationId != sendProps.CorrelationId)
-							continue;
-
-						var reply = _messageHandler.Deserialize<TMessage>(e.Body);
-
-						handler(e.BasicProperties, reply);
-						return;
-					}
-				}
-				finally
-				{
-					replyChannel.Dispose();
-					connection.Dispose();
-				}
+				source.SetResult(new QueryResponse<TMessage> { Properties = p, Message = m });
+				unsubscribe();
+				return true;
 			});
-
-			t.Start();
-
 
 			sendChannel.BasicPublish(
 				exchange: "",
@@ -178,14 +159,15 @@ namespace RabbitHarness
 
 			sendChannel.Dispose();
 
+			return source.Task;
 		}
 
-		public void Query<TMessage>(ExchangeDefinition exchangeDefinition, Action<IBasicProperties> customiseProps, object message, Func<IBasicProperties, TMessage, bool> handler)
+		public Task<QueryResponse<TMessage>> Query<TMessage>(ExchangeDefinition exchangeDefinition, Action<IBasicProperties> customiseProps, object message)
 		{
-			Query(exchangeDefinition, DefaultRoutingKey, customiseProps, message, handler);
+			return Query<TMessage>(exchangeDefinition, DefaultRoutingKey, customiseProps, message);
 		}
 
-		public void Query<TMessage>(ExchangeDefinition exchangeDefinition, string routingKey, Action<IBasicProperties> customiseProps, object message, Func<IBasicProperties, TMessage, bool> handler)
+		public Task<QueryResponse<TMessage>> Query<TMessage>(ExchangeDefinition exchangeDefinition, string routingKey, Action<IBasicProperties> customiseProps, object message)
 		{
 			var connection = _factory.CreateConnection();
 			var replyChannel = connection.CreateModel();
@@ -198,37 +180,18 @@ namespace RabbitHarness
 			sendProps.CorrelationId = sendProps.CorrelationId ?? Guid.NewGuid().ToString();
 			sendProps.ReplyTo = replyTo;
 
-			var t = new Task(() =>
+			var source = new TaskCompletionSource<QueryResponse<TMessage>>();
+			Action unsubscribe = null;
+
+			unsubscribe = Listen<TMessage>(replyChannel, replyTo, (p, m) =>
 			{
+				if (p.CorrelationId != sendProps.CorrelationId)
+					return true;
 
-				exchangeDefinition.Declare(replyChannel);
-
-				var listener = new QueueingBasicConsumer(replyChannel);
-				replyChannel.BasicConsume(replyTo, true, listener);
-
-				try
-				{
-					while (true)
-					{
-						var e = listener.Queue.Dequeue();
-
-						if (e.BasicProperties.CorrelationId != sendProps.CorrelationId)
-							continue;
-
-						var reply = _messageHandler.Deserialize<TMessage>(e.Body);
-
-						handler(e.BasicProperties, reply);
-						return;
-					}
-				}
-				finally
-				{
-					replyChannel.Dispose();
-					connection.Dispose();
-				}
+				source.SetResult(new QueryResponse<TMessage> { Properties = p, Message = m });
+				unsubscribe();
+				return true;
 			});
-
-			t.Start();
 
 			sendChannel.BasicPublish(
 				exchange: exchangeDefinition.Name,
@@ -237,6 +200,8 @@ namespace RabbitHarness
 				body: _messageHandler.Serialize(message));
 
 			sendChannel.Dispose();
+
+			return source.Task;
 		}
 
 		private Action Listen<TMessage>(IModel channel, string queueName, Func<IBasicProperties, TMessage, bool> handler)

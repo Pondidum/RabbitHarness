@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Framing;
 
@@ -115,37 +116,46 @@ namespace RabbitHarness
 				.ForEach(ex => ex.Handler(props, message));
 		}
 
-		public void Query<TMessage>(QueueDefinition queueDefinition, Action<IBasicProperties> customiseProps, object message, Func<IBasicProperties, TMessage, bool> handler)
+		public Task<QueryResponse<TMessage>> Query<TMessage>(QueueDefinition queueDefinition, Action<IBasicProperties> customiseProps, object message)
 		{
 			var reply = Guid.NewGuid().ToString();
 
 			Action unsubscribe = null;
 
+			var source = new TaskCompletionSource<QueryResponse<TMessage>>();
+
 			unsubscribe = ListenTo<TMessage>(new QueueDefinition { Name = reply }, (p, m) =>
 			{
 				unsubscribe();
-				return handler(p, m);
+				source.SetResult(new QueryResponse<TMessage> { Properties = p, Message = m});
+				return true;
 			});
 
 			SendTo(queueDefinition, props => props.ReplyTo = reply, message);
+
+			return source.Task;
 		}
 
-		public void Query<TMessage>(ExchangeDefinition exchangeDefinition, Action<IBasicProperties> customiseProps, object message, Func<IBasicProperties, TMessage, bool> handler)
+		public Task<QueryResponse<TMessage>> Query<TMessage>(ExchangeDefinition exchangeDefinition, Action<IBasicProperties> customiseProps, object message)
 		{
 			var reply = Guid.NewGuid().ToString();
 
 			Action unsubscribe = null;
+			var source = new TaskCompletionSource<QueryResponse<TMessage>>();
 
 			unsubscribe = ListenTo<TMessage>(new QueueDefinition { Name = reply }, (p, m) =>
 			{
 				unsubscribe();
-				return handler(p, m);
+				source.SetResult(new QueryResponse<TMessage> { Properties = p, Message = m });
+				return true;
 			});
 
 			SendTo(exchangeDefinition, props => props.ReplyTo = reply, message);
+
+			return source.Task;
 		}
 
-		public void Query<TMessage>(ExchangeDefinition exchangeDefinition, string routingKey, Action<IBasicProperties> customiseProps, object message, Func<IBasicProperties, TMessage, bool> handler)
+		public Task<QueryResponse<TMessage>> Query<TMessage>(ExchangeDefinition exchangeDefinition, string routingKey, Action<IBasicProperties> customiseProps, object message)
 		{
 			throw new NotImplementedException();
 		}
