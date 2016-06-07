@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Framing;
@@ -111,9 +112,28 @@ namespace RabbitHarness
 				return;
 
 			handlers
-				.Where(ex => ex.RoutingKey == routingKey || string.IsNullOrEmpty(ex.RoutingKey))
+				.Where(eh => RoutingKeyMatches(eh.RoutingKey, routingKey))
 				.ToList()
 				.ForEach(ex => ex.Handler(props, message));
+		}
+
+		public static bool RoutingKeyMatches(string handlerKey, string messageKey)
+		{
+			if (handlerKey == messageKey)
+				return true;
+			
+			if (string.IsNullOrEmpty(handlerKey))
+				return true;
+
+			if (handlerKey == "#")
+				return true;
+			
+			var rx = new Regex("^" + handlerKey.Replace("*", "(.*?)") + "$");
+
+			if (rx.IsMatch(messageKey))
+				return true;
+
+			return false;
 		}
 
 		public Task<QueryResponse<TMessage>> Query<TMessage>(QueueDefinition queueDefinition, Action<IBasicProperties> customiseProps, object message)
