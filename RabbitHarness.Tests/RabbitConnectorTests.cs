@@ -298,12 +298,12 @@ namespace RabbitHarness.Tests
 		[RequiresRabbitFact(Host)]
 		public void When_querying_an_exchange_with_a_routngkey()
 		{
-			var exchange = new ExchangeDefinition(ExchangeName, ExchangeType.Direct)
+			var exchange = new ExchangeDefinition(ExchangeName, ExchangeType.Topic)
 			{
 				AutoDelete = true,
 			};
 
-			var unsubscribe = ExchangeResponder("some.key");
+			var unsubscribe = ExchangeResponder(ExchangeType.Topic, "some.*");
 			int recieved = 0;
 			var message = 1234;
 
@@ -314,7 +314,7 @@ namespace RabbitHarness.Tests
 					recieved = response.Result.Message;
 					_reset.Set();
 				})
-				.Wait();
+				.Wait(TimeSpan.FromSeconds(5));
 
 			unsubscribe();
 
@@ -352,9 +352,9 @@ namespace RabbitHarness.Tests
 			});
 		}
 
-		protected Action ExchangeResponder(string routingKey = "")
+		protected Action ExchangeResponder(string exchangeType = ExchangeType.Direct, string routingKey = "")
 		{
-			var exchange = new ExchangeDefinition(ExchangeName, ExchangeType.Direct) { AutoDelete = true };
+			var exchange = new ExchangeDefinition(ExchangeName, exchangeType) { AutoDelete = true };
 
 			return _connector.ListenTo<int>(exchange, routingKey, (props, message) =>
 			{
