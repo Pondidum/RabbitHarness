@@ -2,6 +2,7 @@
 using System.Threading;
 using RabbitMQ.Client;
 using Shouldly;
+using Xunit;
 
 namespace RabbitHarness.Tests
 {
@@ -294,6 +295,32 @@ namespace RabbitHarness.Tests
 			recieved.ShouldBe(4);
 		}
 
+		[RequiresRabbitFact(Host)]
+		public void When_querying_an_exchange_with_a_routngkey()
+		{
+			var exchange = new ExchangeDefinition(ExchangeName, ExchangeType.Direct)
+			{
+				AutoDelete = true,
+			};
+
+			var unsubscribe = ExchangeResponder("some.key");
+			int recieved = 0;
+			var message = 1234;
+
+			_connector
+				.Query<int>(exchange, "some.key", props => { }, message)
+				.ContinueWith(response =>
+				{
+					recieved = response.Result.Message;
+					_reset.Set();
+				})
+				.Wait();
+
+			unsubscribe();
+
+			recieved.ShouldBe(4);
+		}
+
 		private void SendToQueue(object message)
 		{
 			_connector.SendTo(
@@ -325,11 +352,11 @@ namespace RabbitHarness.Tests
 			});
 		}
 
-		protected Action ExchangeResponder()
+		protected Action ExchangeResponder(string routingKey = "")
 		{
 			var exchange = new ExchangeDefinition(ExchangeName, ExchangeType.Direct) { AutoDelete = true };
 
-			return _connector.ListenTo<int>(exchange, (props, message) =>
+			return _connector.ListenTo<int>(exchange, routingKey, (props, message) =>
 			{
 				var result = message.ToString().Length;
 				_connector.SendTo(
