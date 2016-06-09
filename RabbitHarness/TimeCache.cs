@@ -28,7 +28,15 @@ namespace RabbitHarness
 				var nt = new NetworkTime();
 
 				Stopwatch.Start();
-				return nt.GetNetworkTime();
+
+				try
+				{
+					return nt.GetNetworkTime();
+				}
+				catch (Exception)
+				{
+					return DateTime.UtcNow;
+				}
 			});
 		}
 
