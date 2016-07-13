@@ -1,6 +1,6 @@
 ﻿namespace RabbitHarness
 {
-	public interface IMessageHandler
+	public interface IMessageSerializer
 	{
 		byte[] Serialize(object message);
 		TMessage Deserialize<TMessage>(byte[] bytes);

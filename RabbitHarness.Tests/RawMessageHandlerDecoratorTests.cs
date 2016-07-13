@@ -7,11 +7,11 @@ namespace RabbitHarness.Tests
 {
 	public class RawMessageHandlerDecoratorTests
 	{
-		private readonly RawMessageHandlerDecorator _rawHandler;
+		private readonly RawMessageSerializerDecorator _rawSerializer;
 
 		public RawMessageHandlerDecoratorTests()
 		{
-			_rawHandler = new RawMessageHandlerDecorator(new DefaultMessageHandler());
+			_rawSerializer = new RawMessageSerializerDecorator(new DefaultMessageSerializer());
 		}
 
 		[Fact]
@@ -19,7 +19,7 @@ namespace RabbitHarness.Tests
 		{
 			var input = new byte[] { 1, 2, 3, 4, 5 };
 
-			var serialized = _rawHandler.Serialize(input);
+			var serialized = _rawSerializer.Serialize(input);
 
 			serialized.ShouldBe(input);
 		}
@@ -29,7 +29,7 @@ namespace RabbitHarness.Tests
 		{
 			var input = new Dto { Name = "Dave" };
 
-			var serialized = _rawHandler.Serialize(input);
+			var serialized = _rawSerializer.Serialize(input);
 
 			var expected = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(input));
 			serialized.ShouldBe(expected);
@@ -40,7 +40,7 @@ namespace RabbitHarness.Tests
 		{
 			var input = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new { Name = "Dave" }));
 
-			var deserialized = _rawHandler.Deserialize<byte[]>(input);
+			var deserialized = _rawSerializer.Deserialize<byte[]>(input);
 
 			deserialized.ShouldBe(input);
 		}
@@ -50,7 +50,7 @@ namespace RabbitHarness.Tests
 		{
 			var input = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(new { Name = "Dave" }));
 
-			var deserialized = _rawHandler.Deserialize<Dto>(input);
+			var deserialized = _rawSerializer.Deserialize<Dto>(input);
 
 			deserialized.Name.ShouldBe("Dave");
 		}

@@ -48,10 +48,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DefaultMessageHandler.cs" />
+    <Compile Include="DefaultMessageSerializer.cs" />
     <Compile Include="ExchangeDefinition.cs" />
     <Compile Include="Extensions.cs" />
-    <Compile Include="IMessageHandler.cs" />
+    <Compile Include="IMessageSerializer.cs" />
     <Compile Include="InMemoryConnector.cs" />
     <Compile Include="IRabbitConnector.cs" />
     <Compile Include="NetworkTime.cs" />
@@ -60,7 +60,7 @@
     <Compile Include="QueryResponse.cs" />
     <Compile Include="QueueDefinition.cs" />
     <Compile Include="RabbitConnector.cs" />
-    <Compile Include="RawMessageHandlerDecorator.cs" />
+    <Compile Include="RawMessageSerializerDecorator.cs" />
     <Compile Include="TimeCache.cs" />
   </ItemGroup>
   <ItemGroup>

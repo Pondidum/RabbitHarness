@@ -3,16 +3,16 @@ using Newtonsoft.Json;
 
 namespace RabbitHarness
 {
-	public class DefaultMessageHandler : IMessageHandler
+	public class DefaultMessageSerializer : IMessageSerializer
 	{
 		private readonly JsonSerializerSettings _jsonSettings;
 
-		public DefaultMessageHandler() 
+		public DefaultMessageSerializer() 
 			: this(new JsonSerializerSettings())
 		{
 		}
 
-		public DefaultMessageHandler(JsonSerializerSettings jsonSettings)
+		public DefaultMessageSerializer(JsonSerializerSettings jsonSettings)
 		{
 			_jsonSettings = jsonSettings;
 		}

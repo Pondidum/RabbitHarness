@@ -10,18 +10,18 @@ namespace RabbitHarness
 		private const string DefaultRoutingKey = "";
 
 		private readonly ConnectionFactory _factory;
-		private readonly IMessageHandler _messageHandler;
+		private readonly IMessageSerializer _messageSerializer;
 
 		public RabbitConnector(ConnectionFactory factory)
-			: this(factory, new DefaultMessageHandler())
+			: this(factory, new DefaultMessageSerializer())
 		{
 
 		}
 
-		public RabbitConnector(ConnectionFactory factory, IMessageHandler messageHandler)
+		public RabbitConnector(ConnectionFactory factory, IMessageSerializer messageSerializer)
 		{
 			_factory = factory;
-			_messageHandler = new RawMessageHandlerDecorator(messageHandler);
+			_messageSerializer = new RawMessageSerializerDecorator(messageSerializer);
 		}
 
 		public Action ListenTo<TMessage>(QueueDefinition queueDefinition, Func<IBasicProperties, TMessage, bool> handler)
@@ -94,7 +94,7 @@ namespace RabbitHarness
 			{
 				queueDefinition.Declare(channel);
 
-				var bytes = _messageHandler.Serialize(message);
+				var bytes = _messageSerializer.Serialize(message);
 
 				var props = channel.CreateBasicProperties();
 				customiseProps(props);
@@ -115,7 +115,7 @@ namespace RabbitHarness
 			{
 				exchangeDefinition.Declare(channel);
 
-				var bytes = _messageHandler.Serialize(message);
+				var bytes = _messageSerializer.Serialize(message);
 
 				var props = channel.CreateBasicProperties();
 				customiseProps(props);
@@ -155,7 +155,7 @@ namespace RabbitHarness
 				exchange: "",
 				routingKey: queueDefinition.Name,
 				basicProperties: sendProps,
-				body: _messageHandler.Serialize(message));
+				body: _messageSerializer.Serialize(message));
 
 			sendChannel.Dispose();
 
@@ -197,7 +197,7 @@ namespace RabbitHarness
 				exchange: exchangeDefinition.Name,
 				routingKey: routingKey,
 				basicProperties: sendProps,
-				body: _messageHandler.Serialize(message));
+				body: _messageSerializer.Serialize(message));
 
 			sendChannel.Dispose();
 
@@ -210,7 +210,7 @@ namespace RabbitHarness
 			{
 				try
 				{
-					var message = _messageHandler.Deserialize<TMessage>(e.Body);
+					var message = _messageSerializer.Deserialize<TMessage>(e.Body);
 
 					var success = handler(e.BasicProperties, message);
 

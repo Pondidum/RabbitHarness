@@ -2,11 +2,11 @@ using System;
 
 namespace RabbitHarness
 {
-	public class RawMessageHandlerDecorator : IMessageHandler
+	public class RawMessageSerializerDecorator : IMessageSerializer
 	{
-		private readonly IMessageHandler _inner;
+		private readonly IMessageSerializer _inner;
 
-		public RawMessageHandlerDecorator(IMessageHandler inner)
+		public RawMessageSerializerDecorator(IMessageSerializer inner)
 		{
 			_inner = inner;
 		}
