@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using Newtonsoft.Json;
 using RabbitMQ.Client;
 using Shouldly;
 using Xunit;
@@ -42,6 +43,44 @@ namespace RabbitHarness.Tests
 			_reset.WaitOne(TimeSpan.FromSeconds(5));
 
 			recieved.ShouldBe(123);
+		}
+
+		[RequiresRabbitFact(Host)]
+		public void When_listening_to_a_queue_and_serialization_fails()
+		{
+			var queue = new QueueDefinition
+			{
+				Name = QueueName,
+				AutoDelete = true
+			};
+
+			Exception exception = null;
+			Dto recieved = null;
+
+			var handler = new LambdaMessageHandler<Dto>(
+				(props, json) =>
+				{
+					recieved = json;
+					_reset.Set();
+					return true;
+				},
+				ex =>
+				{
+					exception = ex;
+				});
+
+			_connector.ListenTo(queue, handler);
+
+			SendToQueue(123);
+			_reset.WaitOne(TimeSpan.FromSeconds(5));
+
+			recieved.ShouldBe(null);
+			exception.ShouldBeOfType<JsonSerializationException>();
+		}
+
+		private class Dto
+		{
+			public string Name { get; set; }
 		}
 
 		[RequiresRabbitFact(Host)]
