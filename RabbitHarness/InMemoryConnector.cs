@@ -19,7 +19,7 @@ namespace RabbitHarness
 			_exchanges = new Dictionary<string, List<ExchangeHandler>>();
 		}
 
-		public Action ListenTo<TMessage>(QueueDefinition queueDefinition, Func<IBasicProperties, TMessage, bool> handler)
+		public Action ListenTo<TMessage>(QueueDefinition queueDefinition, MessageHandler<TMessage> handler)
 		{
 			List<Func<IBasicProperties, object, bool>> handlers;
 
@@ -31,7 +31,7 @@ namespace RabbitHarness
 
 			Func<IBasicProperties, object, bool> wrapped = (props, message) =>
 			{
-				while (handler(props, (TMessage)message) == false)
+				while (handler.OnReceive(props, (TMessage)message) == false)
 				{
 				}
 
@@ -46,7 +46,7 @@ namespace RabbitHarness
 			};
 		}
 
-		public Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, QueueDefinition queueDefinition, Func<IBasicProperties, TMessage, bool> handler)
+		public Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, QueueDefinition queueDefinition, MessageHandler<TMessage> handler)
 		{
 			List<ExchangeHandler> handlers;
 
@@ -59,7 +59,7 @@ namespace RabbitHarness
 			var exchangeHandler = new ExchangeHandler
 			{
 				RoutingKey = queueDefinition.RoutingKeys.First(),
-				Handler = (props, message) => handler(props, (TMessage)message),
+				Handler = (props, message) => handler.OnReceive(props, (TMessage)message),
 			};
 
 			handlers.Add(exchangeHandler);
@@ -71,12 +71,12 @@ namespace RabbitHarness
 
 		}
 
-		public Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, Func<IBasicProperties, TMessage, bool> handler)
+		public Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, MessageHandler<TMessage> handler)
 		{
 			return ListenTo(exchangeDefinition, "#", handler);
 		}
 
-		public Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, string routingKey, Func<IBasicProperties, TMessage, bool> handler)
+		public Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, string routingKey, MessageHandler<TMessage> handler)
 		{
 			return ListenTo(exchangeDefinition, new QueueDefinition { Name = Guid.NewGuid().ToString(), AutoDelete = true, RoutingKeys = new[] { routingKey } }, handler);
 		}
@@ -144,12 +144,12 @@ namespace RabbitHarness
 
 			var source = new TaskCompletionSource<QueryResponse<TMessage>>();
 
-			unsubscribe = ListenTo<TMessage>(new QueueDefinition { Name = reply }, (p, m) =>
+			unsubscribe = ListenTo<TMessage>(new QueueDefinition { Name = reply }, new LambdaMessageHandler<TMessage>( (p, m) =>
 			{
 				unsubscribe();
 				source.SetResult(new QueryResponse<TMessage> { Properties = p, Message = m});
 				return true;
-			});
+			}));
 
 			SendTo(queueDefinition, props => props.ReplyTo = reply, message);
 
@@ -163,12 +163,12 @@ namespace RabbitHarness
 			Action unsubscribe = null;
 			var source = new TaskCompletionSource<QueryResponse<TMessage>>();
 
-			unsubscribe = ListenTo<TMessage>(new QueueDefinition { Name = reply }, (p, m) =>
+			unsubscribe = ListenTo<TMessage>(new QueueDefinition { Name = reply }, new LambdaMessageHandler<TMessage>( (p, m) =>
 			{
 				unsubscribe();
 				source.SetResult(new QueryResponse<TMessage> { Properties = p, Message = m });
 				return true;
-			});
+			}));
 
 			SendTo(exchangeDefinition, props => props.ReplyTo = reply, message);
 

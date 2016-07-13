@@ -24,7 +24,7 @@ namespace RabbitHarness
 			_messageSerializer = new RawMessageSerializerDecorator(messageSerializer);
 		}
 
-		public Action ListenTo<TMessage>(QueueDefinition queueDefinition, Func<IBasicProperties, TMessage, bool> handler)
+		public Action ListenTo<TMessage>(QueueDefinition queueDefinition, MessageHandler<TMessage> handler)
 		{
 			var connection = _factory.CreateConnection();
 			var channel = connection.CreateModel();
@@ -41,7 +41,7 @@ namespace RabbitHarness
 			};
 		}
 
-		public Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, QueueDefinition queueDefinition, Func<IBasicProperties, TMessage, bool> handler)
+		public Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, QueueDefinition queueDefinition, MessageHandler<TMessage> handler)
 		{
 			var connection = _factory.CreateConnection();
 			var channel = connection.CreateModel();
@@ -62,12 +62,12 @@ namespace RabbitHarness
 			};
 		}
 
-		public Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, Func<IBasicProperties, TMessage, bool> handler)
+		public Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, MessageHandler<TMessage> handler)
 		{
 			return ListenTo(exchangeDefinition, DefaultRoutingKey, handler);
 		}
 
-		public Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, string routingKey, Func<IBasicProperties, TMessage, bool> handler)
+		public Action ListenTo<TMessage>(ExchangeDefinition exchangeDefinition, string routingKey, MessageHandler<TMessage> handler)
 		{
 			var connection = _factory.CreateConnection();
 			var channel = connection.CreateModel();
@@ -141,7 +141,7 @@ namespace RabbitHarness
 			var source = new TaskCompletionSource<QueryResponse<TMessage>>();
 			Action unsubscribe = null;
 
-			unsubscribe = Listen<TMessage>(replyChannel, replyTo, (p, m) =>
+			unsubscribe = Listen<TMessage>(replyChannel, replyTo, new LambdaMessageHandler<TMessage>((p, m) =>
 			{
 				if (p.CorrelationId != sendProps.CorrelationId)
 					return true;
@@ -149,7 +149,7 @@ namespace RabbitHarness
 				source.SetResult(new QueryResponse<TMessage> { Properties = p, Message = m });
 				unsubscribe();
 				return true;
-			});
+			}));
 
 			sendChannel.BasicPublish(
 				exchange: "",
@@ -183,7 +183,7 @@ namespace RabbitHarness
 			var source = new TaskCompletionSource<QueryResponse<TMessage>>();
 			Action unsubscribe = null;
 
-			unsubscribe = Listen<TMessage>(replyChannel, replyTo, (p, m) =>
+			unsubscribe = Listen<TMessage>(replyChannel, replyTo, new LambdaMessageHandler<TMessage>((p, m) =>
 			{
 				if (p.CorrelationId != sendProps.CorrelationId)
 					return true;
@@ -191,7 +191,7 @@ namespace RabbitHarness
 				source.SetResult(new QueryResponse<TMessage> { Properties = p, Message = m });
 				unsubscribe();
 				return true;
-			});
+			}));
 
 			sendChannel.BasicPublish(
 				exchange: exchangeDefinition.Name,
@@ -204,7 +204,7 @@ namespace RabbitHarness
 			return source.Task;
 		}
 
-		private Action Listen<TMessage>(IModel channel, string queueName, Func<IBasicProperties, TMessage, bool> handler)
+		private Action Listen<TMessage>(IModel channel, string queueName, MessageHandler<TMessage> handler)
 		{
 			var wrapper = new EventHandler<BasicDeliverEventArgs>((s, e) =>
 			{
@@ -212,17 +212,17 @@ namespace RabbitHarness
 				{
 					var message = _messageSerializer.Deserialize<TMessage>(e.Body);
 
-					var success = handler(e.BasicProperties, message);
+					var success = handler.OnReceive(e.BasicProperties, message);
 
 					if (success)
 						channel.BasicAck(e.DeliveryTag, multiple: false);
 					else
 						channel.BasicNack(e.DeliveryTag, multiple: false, requeue: true);
 				}
-				catch (Exception)
+				catch (Exception ex)
 				{
 					channel.BasicNack(e.DeliveryTag, multiple: false, requeue: true);
-					throw;
+					handler.OnException(ex);
 				}
 			});
 

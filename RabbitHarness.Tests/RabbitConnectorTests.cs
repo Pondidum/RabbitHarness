@@ -31,12 +31,12 @@ namespace RabbitHarness.Tests
 
 			_connector.ListenTo<int>(
 				queue,
-				(props, json) =>
+				new LambdaMessageHandler<int>((props, json) =>
 				{
 					recieved = json;
 					_reset.Set();
 					return true;
-				});
+				}));
 
 			SendToQueue(123);
 			_reset.WaitOne(TimeSpan.FromSeconds(5));
@@ -57,11 +57,11 @@ namespace RabbitHarness.Tests
 
 			_connector.ListenTo<int>(
 				queue,
-				(props, message) =>
+				new LambdaMessageHandler<int>((props, message) =>
 				{
 					recieved++;
 					return recieved > 1;
-				});
+				}));
 
 			SendToQueue(123);
 			_reset.WaitOne(TimeSpan.FromSeconds(5));
@@ -82,12 +82,12 @@ namespace RabbitHarness.Tests
 
 			var unsubscribe = _connector.ListenTo<int>(
 				queue,
-				(props, json) =>
+				new LambdaMessageHandler<int>((props, json) =>
 				{
 					recieved = json;
 					_reset.Set();
 					return true;
-				});
+				}));
 
 			SendToQueue(123);
 			_reset.WaitOne(TimeSpan.FromSeconds(5));
@@ -119,12 +119,12 @@ namespace RabbitHarness.Tests
 			var unsubscribe = _connector.ListenTo<int>(
 				exchange,
 				queue,
-				(props, json) =>
+				new LambdaMessageHandler<int>((props, json) =>
 				{
 					recieved = json;
 					_reset.Set();
 					return true;
-				});
+				}));
 
 			SendToExchange(123);
 			_reset.WaitOne(TimeSpan.FromSeconds(5));
@@ -144,12 +144,12 @@ namespace RabbitHarness.Tests
 
 			var unsubscribe = _connector.ListenTo<int>(
 				exchange,
-				(props, json) =>
+				new LambdaMessageHandler<int>((props, json) =>
 				{
 					recieved = json;
 					_reset.Set();
 					return true;
-				});
+				}));
 
 			SendToExchange(123);
 			_reset.WaitOne(TimeSpan.FromSeconds(5));
@@ -170,12 +170,12 @@ namespace RabbitHarness.Tests
 
 			_connector.ListenTo<int>(
 				queue,
-				(props, json) =>
+				new LambdaMessageHandler<int>((props, json) =>
 				{
 					recieved = json;
 					_reset.Set();
 					return true;
-				});
+				}));
 
 			_connector.SendTo(queue, props => { }, 1235);
 
@@ -196,12 +196,12 @@ namespace RabbitHarness.Tests
 
 			var unsubscribe = _connector.ListenTo<int>(
 				exchange,
-				(props, json) =>
+				new LambdaMessageHandler<int>((props, json) =>
 				{
 					recieved = json;
 					_reset.Set();
 					return true;
-				});
+				}));
 
 			_connector.SendTo(exchange, props => { }, 123);
 			_reset.WaitOne(TimeSpan.FromSeconds(5));
@@ -229,12 +229,12 @@ namespace RabbitHarness.Tests
 			var unsubscribe = _connector.ListenTo<int>(
 				exchange,
 				queue,
-				(props, json) =>
+				new LambdaMessageHandler<int>((props, json) =>
 				{
 					recieved = json;
 					_reset.Set();
 					return true;
-				});
+				}));
 
 			_connector.SendTo(exchange, "some.key", props => { }, 123);
 			_reset.WaitOne(TimeSpan.FromSeconds(5));
@@ -341,7 +341,7 @@ namespace RabbitHarness.Tests
 		{
 			var queue = new QueueDefinition { Name = QueueName, AutoDelete = true };
 
-			return _connector.ListenTo<int>(queue, (props, message) =>
+			return _connector.ListenTo<int>(queue, new LambdaMessageHandler<int>((props, message) =>
 			{
 				var result = message.ToString().Length;
 				_connector.SendTo(
@@ -349,14 +349,14 @@ namespace RabbitHarness.Tests
 					p => { p.CorrelationId = props.CorrelationId; },
 					result);
 				return true;
-			});
+			}));
 		}
 
 		protected Action ExchangeResponder(string exchangeType = ExchangeType.Direct, string routingKey = "")
 		{
 			var exchange = new ExchangeDefinition(ExchangeName, exchangeType) { AutoDelete = true };
 
-			return _connector.ListenTo<int>(exchange, routingKey, (props, message) =>
+			return _connector.ListenTo<int>(exchange, routingKey, new LambdaMessageHandler<int>((props, message) =>
 			{
 				var result = message.ToString().Length;
 				_connector.SendTo(
@@ -364,7 +364,7 @@ namespace RabbitHarness.Tests
 					p => { p.CorrelationId = props.CorrelationId; },
 					result);
 				return true;
-			});
+			}));
 		}
 	}
 }

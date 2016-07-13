@@ -39,12 +39,12 @@ namespace RabbitHarness.Tests
 			_connector.ListenTo<int>(
 				_exchangeDefinition,
 				_queueDefinition,
-				(props, json) =>
+				new LambdaMessageHandler<int>((props, json) =>
 				{
 					recieved = json;
 					_reset.Set();
 					return true;
-				});
+				}));
 
 			_connector.SendTo(_exchangeDefinition, "some.key", props => { }, 123);
 			_reset.WaitOne(TimeSpan.FromSeconds(5));
@@ -60,12 +60,12 @@ namespace RabbitHarness.Tests
 			_connector.ListenTo<int>(
 				_exchangeDefinition,
 				_queueDefinition,
-				(props, json) =>
+				new LambdaMessageHandler<int>((props, json) =>
 				{
 					recieved = json;
 					_reset.Set();
 					return true;
-				});
+				}));
 
 			_connector.SendTo(_exchangeDefinition, "another.thing", props => { }, 123);
 			_reset.WaitOne(TimeSpan.FromSeconds(5));
@@ -87,12 +87,12 @@ namespace RabbitHarness.Tests
 			_connector.ListenTo<int>(
 				_exchangeDefinition,
 				queue,
-				(props, message) =>
+				new LambdaMessageHandler<int>((props, message) =>
 				{
 					recieved = message;
 					_reset.Set();
 					return true;
-				});
+				}));
 
 			_connector.SendTo(_exchangeDefinition, "prefix.key", props => { }, 123);
 			_reset.WaitOne(TimeSpan.FromSeconds(5));
