@@ -97,3 +97,50 @@ _connector
 ```
 
 As with `.ListenTo()`, this works with exchanges and exchanges with routing keys.
+
+# Customisation
+
+## Serialization
+
+You can override the default Json Serializer with your own implementation.
+
+```CSharp
+//normal construction
+_connector = new RabbitConnector(factory);
+
+//extended construction
+_connector = new RabbitConnector(config => {
+    config.Factory = factory;
+    config.Serializer = new CustomSerializer();
+});
+```
+
+As an example, the default implementation of the `DefaultMessageSerializer` is as follows:
+
+```CSharp
+public class DefaultMessageSerializer : IMessageSerializer
+{
+    private readonly JsonSerializerSettings _jsonSettings;
+
+    public DefaultMessageSerializer() : this(new JsonSerializerSettings())
+    {
+    }
+
+    public DefaultMessageSerializer(JsonSerializerSettings jsonSettings)
+    {
+        _jsonSettings = jsonSettings;
+    }
+
+    public byte[] Serialize(object message)
+    {
+        var json = JsonConvert.SerializeObject(message, _jsonSettings);
+        return Encoding.UTF8.GetBytes(json);
+    }
+
+    public TMessage Deserialize<TMessage>(byte[] bytes)
+    {
+        var json = Encoding.UTF8.GetString(bytes);
+        return JsonConvert.DeserializeObject<TMessage>(json, _jsonSettings);
+    }
+}
+```
