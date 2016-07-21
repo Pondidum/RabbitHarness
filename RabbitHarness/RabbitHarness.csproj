@@ -62,6 +62,7 @@
     <Compile Include="QueryResponse.cs" />
     <Compile Include="QueueDefinition.cs" />
     <Compile Include="RabbitConnector.cs" />
+    <Compile Include="RabbitConnectorConfiguration.cs" />
     <Compile Include="RawMessageSerializerDecorator.cs" />
     <Compile Include="TimeCache.cs" />
   </ItemGroup>

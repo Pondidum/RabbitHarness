@@ -10,18 +10,20 @@ namespace RabbitHarness
 		private const string DefaultRoutingKey = "";
 
 		private readonly ConnectionFactory _factory;
-		private IMessageSerializer _messageSerializer;
+		private readonly IMessageSerializer _messageSerializer;
 
 		public RabbitConnector(ConnectionFactory factory)
+			: this(config => config.Factory = factory)
 		{
-			_factory = factory;
-			WithSerializer(new DefaultMessageSerializer());
 		}
 
-		public RabbitConnector WithSerializer(IMessageSerializer messageSerializer)
+		public RabbitConnector(Action<RabbitConnectorConfiguration> configure)
 		{
-			_messageSerializer = new RawMessageSerializerDecorator(messageSerializer);
-			return this;
+			var config = new RabbitConnectorConfiguration();
+			configure(config);
+
+			_factory = config.Factory;
+			_messageSerializer = new RawMessageSerializerDecorator(config.Serializer ?? new DefaultMessageSerializer());
 		}
 
 		public Action ListenTo<TMessage>(QueueDefinition queueDefinition, MessageHandler<TMessage> handler)
