@@ -15,6 +15,7 @@ namespace RabbitHarness
 		public RabbitConnector(ConnectionFactory factory)
 		{
 			_factory = factory;
+			WithSerializer(new DefaultMessageSerializer());
 		}
 
 		public RabbitConnector WithSerializer(IMessageSerializer messageSerializer)
