@@ -1,6 +1,8 @@
  # RabbitHarness
  Small abstraction around common operations on RabbitMQ.
 
+# Usage
+
 ## Listening to a Queue
 
 ```CSharp
@@ -76,3 +78,22 @@ connector.SendTo(
     message
 );
 ```
+
+## Querying A Queue or Exchange
+
+The `Query` method will allow you to get a single response from a Queue or Exchange.  It handles the setting of correlationids and response queues to do this for you.
+
+You can also set your own correlationid using the props lambda if you wish - but make sure it's a unique value!
+
+```CSharp
+_connector
+    .Query<int>(queue, props => { }, message)
+    .ContinueWith(response =>
+    {
+        var props = response.Result.Properties;
+        var message = response.Result.Message;
+    })
+    .Wait(); //Don't call wait() if you want this to be completely async!
+```
+
+As with `.ListenTo()`, this works with exchanges and exchanges with routing keys.
