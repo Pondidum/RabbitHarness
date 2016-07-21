@@ -42,6 +42,14 @@
       <HintPath>..\packages\Shouldly.2.6.0\lib\net40\Shouldly.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="StructureMap, Version=4.2.0.402, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\structuremap.4.2.0.402\lib\net40\StructureMap.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="StructureMap.Net4, Version=4.2.0.402, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\structuremap.4.2.0.402\lib\net40\StructureMap.Net4.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -68,6 +76,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ContainerTests.cs" />
     <Compile Include="Extensions\ToTimestampTests.cs" />
     <Compile Include="InMemoryConnectorTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
