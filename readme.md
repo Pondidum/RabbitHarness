@@ -39,8 +39,9 @@ public class RabbitListener : IDisposable
 }
 ```
 
-You can also listen to Exchanges (creating an autoqueue, or specified) and specify routing keys for exchange listeners.
+You can also listen to Exchanges (and optionally binding with a specifed queue.) You can also specify routing keys for exchange listeners.
 
+If you call `.ListenTo<byte[]>`, RabbitHarness will just return the raw byte content of the message recieved, rather than attempting json deserialization (if you'd rather use something other than Json, see the Customisation - Serialization section below.)
 
 ## Sending a Message
 
@@ -144,3 +145,5 @@ public class DefaultMessageSerializer : IMessageSerializer
     }
 }
 ```
+
+All serial
