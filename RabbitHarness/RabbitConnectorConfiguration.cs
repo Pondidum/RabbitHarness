@@ -4,7 +4,7 @@ namespace RabbitHarness
 {
 	public class RabbitConnectorConfiguration
 	{
-		public ConnectionFactory Factory { get; set; }
+		public IConnectionFactory Factory { get; set; }
 		public IMessageSerializer Serializer { get; set; }
 	}
 }

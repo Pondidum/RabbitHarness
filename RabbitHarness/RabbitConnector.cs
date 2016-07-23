@@ -9,10 +9,10 @@ namespace RabbitHarness
 	{
 		private const string DefaultRoutingKey = "";
 
-		private readonly ConnectionFactory _factory;
+		private readonly IConnectionFactory _factory;
 		private readonly IMessageSerializer _messageSerializer;
 
-		public RabbitConnector(ConnectionFactory factory)
+		public RabbitConnector(IConnectionFactory factory)
 			: this(config => config.Factory = factory)
 		{
 		}
