@@ -145,5 +145,3 @@ public class DefaultMessageSerializer : IMessageSerializer
     }
 }
 ```
-
-All serial
