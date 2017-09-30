@@ -18,4 +18,9 @@
   <TargetFramework>netstandard2.0</TargetFramework>
 </PropertyGroup>
 
+<ItemGroup>
+  <PackageReference Include="RabbitMQ.Client" Version="5.0.1" />
+  <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
+</ItemGroup>
+
 </Project>
