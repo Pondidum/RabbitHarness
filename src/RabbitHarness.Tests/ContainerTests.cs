@@ -2,7 +2,6 @@
 using RabbitMQ.Client;
 using Shouldly;
 using StructureMap;
-using StructureMap.Graph;
 using Xunit;
 
 namespace RabbitHarness.Tests
