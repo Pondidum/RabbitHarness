@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+  <PackageId>RabbitHarness</PackageId>
+  <PackageTags>rabbitmq</PackageTags>
+  <PackageVersion>0.8.1</PackageVersion>
+  <Title>Finite</Title>
+  <Description>A small set of methods to work with RabbitMQ.</Description>
+  <Authors>Andy Dote</Authors>
+
+  <PackageProjectUrl>http://github.com/pondidum/RabbitHarness/</PackageProjectUrl>
+  <PackageLicenseUrl>https://github.com/Pondidum/RabbitHarness/blob/master/LICENSE.txt</PackageLicenseUrl>
+  <RepositoryType>git</RepositoryType>
+  <RepositoryUrl>git://github.com/pondidum/RabbitHarness</RepositoryUrl>
+</PropertyGroup>
+
+<PropertyGroup>
+  <TargetFramework>netstandard2.0</TargetFramework>
+</PropertyGroup>
+
+</Project>

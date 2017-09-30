@@ -1,9 +1,7 @@
 version: '{build}'
 build_script:
-- npm install -g gulp
-- npm install
-- gulp --mode Release
+- sh build.sh Release
 test: off
 artifacts:
-- path: build\deploy\*.nupkg
+- path: .build\*.nupkg
   name: NugetPackages
