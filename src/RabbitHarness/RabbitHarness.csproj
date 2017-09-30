@@ -4,7 +4,7 @@
   <PackageId>RabbitHarness</PackageId>
   <PackageTags>rabbitmq</PackageTags>
   <PackageVersion>0.9.0</PackageVersion>
-  <Title>Finite</Title>
+  <Title>RabbitHarness</Title>
   <Description>A small set of methods to work with RabbitMQ.</Description>
   <Authors>Andy Dote</Authors>
 
