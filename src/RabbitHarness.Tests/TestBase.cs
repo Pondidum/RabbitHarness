@@ -5,7 +5,7 @@ namespace RabbitHarness.Tests
 {
 	public class TestBase : IDisposable
 	{
-		protected const string Host = "localhost";
+		public const string Host = "localhost";
 		protected readonly string QueueName;
 		protected readonly string ExchangeName;
 

@@ -6,35 +6,29 @@ namespace RabbitHarness.Tests
 {
 	public class RequiresRabbitFactAttribute : FactAttribute
 	{
-		private static Func<bool> _isAvailable; 
-
-		public RequiresRabbitFactAttribute(string host)
+		private static readonly Lazy<bool> IsAvailable = new Lazy<bool>(() =>
 		{
-			_isAvailable = _isAvailable ?? (() =>
+			var factory = new ConnectionFactory
 			{
-				var factory = new ConnectionFactory
-				{
-					HostName = host,
-					RequestedConnectionTimeout = 1000
-				};
+				HostName = TestBase.Host,
+				RequestedConnectionTimeout = 1000
+			};
 
-				try
-				{
-					using (var connection = factory.CreateConnection())
-					{
-						return connection.IsOpen;
-					}
-				}
-				catch (Exception)
-				{
-					return false;
-				}
-			});
-
-			if (_isAvailable() == false)
+			try
 			{
-				Skip = "RabbitMQ is not available";
+				using (var connection = factory.CreateConnection())
+					return connection.IsOpen;
 			}
+			catch (Exception)
+			{
+				return false;
+			}
+		});
+
+		public override string Skip
+		{
+			get { return IsAvailable.Value ? "" : "RabbitMQ is not available"; }
+			set { /* nothing */ }
 		}
 	}
 }

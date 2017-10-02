@@ -19,7 +19,7 @@ namespace RabbitHarness.Tests
 			//_connector = new InMemoryConnector();
 		}
 
-		[RequiresRabbitFact(Host)]
+		[RequiresRabbitFact]
 		public void When_listening_to_a_queue()
 		{
 			var queue = new QueueDefinition
@@ -45,7 +45,7 @@ namespace RabbitHarness.Tests
 			recieved.ShouldBe(123);
 		}
 
-		[RequiresRabbitFact(Host)]
+		[RequiresRabbitFact]
 		public void When_listening_to_a_queue_and_serialization_fails()
 		{
 			var queue = new QueueDefinition
@@ -83,7 +83,7 @@ namespace RabbitHarness.Tests
 			public string Name { get; set; }
 		}
 
-		[RequiresRabbitFact(Host)]
+		[RequiresRabbitFact]
 		public void When_listening_to_a_queue_and_the_message_is_not_acknowleged()
 		{
 			var queue = new QueueDefinition
@@ -108,7 +108,7 @@ namespace RabbitHarness.Tests
 			recieved.ShouldBe(2);
 		}
 
-		[RequiresRabbitFact(Host)]
+		[RequiresRabbitFact]
 		public void When_listening_to_a_queue_and_unsubscribed()
 		{
 			var queue = new QueueDefinition
@@ -139,7 +139,7 @@ namespace RabbitHarness.Tests
 			recieved.ShouldBe(123);
 		}
 
-		[RequiresRabbitFact(Host)]
+		[RequiresRabbitFact]
 		public void When_listening_to_an_exchange_with_a_custom_queue()
 		{
 			var exchange = new ExchangeDefinition(ExchangeName, ExchangeType.Direct)
@@ -171,7 +171,7 @@ namespace RabbitHarness.Tests
 			recieved.ShouldBe(123);
 		}
 
-		[RequiresRabbitFact(Host)]
+		[RequiresRabbitFact]
 		public void When_listening_to_an_exchange_with_an_auto_queue()
 		{
 			var exchange = new ExchangeDefinition(ExchangeName, ExchangeType.Direct)
@@ -196,7 +196,7 @@ namespace RabbitHarness.Tests
 			recieved.ShouldBe(123);
 		}
 
-		[RequiresRabbitFact(Host)]
+		[RequiresRabbitFact]
 		public void When_sending_to_a_queue()
 		{
 			var queue = new QueueDefinition
@@ -223,7 +223,7 @@ namespace RabbitHarness.Tests
 			recieved.ShouldBe(1235);
 		}
 
-		[RequiresRabbitFact(Host)]
+		[RequiresRabbitFact]
 		public void When_sending_to_an_exchange()
 		{
 			var exchange = new ExchangeDefinition(ExchangeName, ExchangeType.Direct)
@@ -248,7 +248,7 @@ namespace RabbitHarness.Tests
 			recieved.ShouldBe(123);
 		}
 
-		[RequiresRabbitFact(Host)]
+		[RequiresRabbitFact]
 		public void When_sending_to_an_exchange_with_a_routing_key()
 		{
 			var exchange = new ExchangeDefinition(ExchangeName, ExchangeType.Direct)
@@ -281,7 +281,7 @@ namespace RabbitHarness.Tests
 			recieved.ShouldBe(123);
 		}
 
-		[RequiresRabbitFact(Host)]
+		[RequiresRabbitFact]
 		public void When_querying_a_queue()
 		{
 			var queue = new QueueDefinition
@@ -308,7 +308,7 @@ namespace RabbitHarness.Tests
 			recieved.ShouldBe(4);
 		}
 
-		[RequiresRabbitFact(Host)]
+		[RequiresRabbitFact]
 		public void When_querying_an_exchange()
 		{
 			var exchange = new ExchangeDefinition(ExchangeName, ExchangeType.Direct)
@@ -334,7 +334,7 @@ namespace RabbitHarness.Tests
 			recieved.ShouldBe(4);
 		}
 
-		[RequiresRabbitFact(Host)]
+		[RequiresRabbitFact]
 		public void When_querying_an_exchange_with_a_routngkey()
 		{
 			var exchange = new ExchangeDefinition(ExchangeName, ExchangeType.Topic)
